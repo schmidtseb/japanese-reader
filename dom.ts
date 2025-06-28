@@ -5,6 +5,7 @@ export const button = document.getElementById('generate-button') as HTMLButtonEl
 export const sentenceInput = document.getElementById('sentence-input') as HTMLTextAreaElement;
 export const textTitleInput = document.getElementById('text-title-input') as HTMLInputElement;
 export const resultContainer = document.getElementById('result-container') as HTMLDivElement;
+export const inputArea = document.querySelector('.input-area') as HTMLDivElement;
 export const mainView = document.getElementById('main-view') as HTMLDivElement;
 export const readerView = document.getElementById('reader-view') as HTMLDivElement;
 export const analysisView = document.getElementById('analysis-view') as HTMLDivElement;
@@ -38,6 +39,14 @@ export const apiKeyInput = document.getElementById('api-key-input') as HTMLInput
 export const saveApiKeyButton = document.getElementById('save-api-key-button') as HTMLButtonElement;
 export const apiKeyStatus = document.getElementById('api-key-status') as HTMLParagraphElement;
 
-if (!button || !sentenceInput || !textTitleInput || !resultContainer || !mainView || !readerView || !analysisView || !readingModeView || !themeCheckbox || !furiganaCheckbox || !pitchAccentCheckbox || !tooltip || !settingsButton || !settingsMenu || !newTextButton || !historyButton || !historyPanel || !closeHistoryButton || !clearHistoryButton || !historyList || !historyEmptyMessage || !historyPanelOverlay || !analysisDepthSlider || !analysisDepthLabel || !exportDataButton || !importDataButton || !importFileInput || !apiKeyInput || !saveApiKeyButton || !apiKeyStatus) {
+// Modal elements
+export const modalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
+export const modalBox = document.getElementById('modal-box') as HTMLDivElement;
+export const modalMessage = document.getElementById('modal-message') as HTMLParagraphElement;
+export const modalConfirmButton = document.getElementById('modal-confirm-button') as HTMLButtonElement;
+export const modalCancelButton = document.getElementById('modal-cancel-button') as HTMLButtonElement;
+
+
+if (!button || !sentenceInput || !textTitleInput || !resultContainer || !inputArea || !mainView || !readerView || !analysisView || !readingModeView || !themeCheckbox || !furiganaCheckbox || !pitchAccentCheckbox || !tooltip || !settingsButton || !settingsMenu || !newTextButton || !historyButton || !historyPanel || !closeHistoryButton || !clearHistoryButton || !historyList || !historyEmptyMessage || !historyPanelOverlay || !analysisDepthSlider || !analysisDepthLabel || !exportDataButton || !importDataButton || !importFileInput || !apiKeyInput || !saveApiKeyButton || !apiKeyStatus || !modalOverlay || !modalBox || !modalMessage || !modalConfirmButton || !modalCancelButton) {
   throw new Error('Required HTML elements not found at startup.');
 }

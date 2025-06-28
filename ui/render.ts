@@ -3,7 +3,7 @@ import * as dom from '../dom.ts';
 import * as state from '../state.ts';
 import { PATTERN_COLORS } from '../constants.ts';
 import { speakText } from '../services/tts.ts';
-import { getCategoryClass, createPitchAccentVisualizer, createFuriganaHTML } from './components.ts';
+import { getCategoryClass, createPitchAccentVisualizer, createFuriganaHTML, createErrorComponent } from './components.ts';
 
 /** Renders the analysis for a single sentence. */
 export function renderSingleAnalysis(container: HTMLElement, data: any, options: { stickyTopClass?: string } = {}) {
@@ -170,14 +170,32 @@ export function renderReaderView(entry: state.TextEntry) {
     
     const header = document.createElement('div');
     header.className = 'flex justify-between items-center mb-4';
-    header.innerHTML = `<h2 class="text-xl font-bold text-slate-800 dark:text-slate-200">Text Content</h2>`;
+    
+    const titleHeading = document.createElement('h2');
+    titleHeading.className = 'text-xl font-bold text-slate-800 dark:text-slate-200';
+    titleHeading.textContent = 'Text Content';
+    header.appendChild(titleHeading);
 
     if (allSentences.length > 0) {
+        const buttonGroup = document.createElement('div');
+        buttonGroup.className = 'flex items-center gap-2';
+    
+        // Edit Button
+        const editButton = document.createElement('button');
+        editButton.id = 'edit-text-button';
+        editButton.className = 'inline-flex items-center px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors';
+        editButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>Edit`;
+        editButton.title = 'Edit this text';
+        buttonGroup.appendChild(editButton);
+    
+        // Start Reading Button
         const startReadingButton = document.createElement('button');
         startReadingButton.id = 'start-reading-button';
         startReadingButton.className = 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 dark:bg-sky-500 dark:hover:bg-sky-600 dark:text-slate-900 dark:font-semibold';
         startReadingButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>Start Reading`;
-        header.appendChild(startReadingButton);
+        buttonGroup.appendChild(startReadingButton);
+    
+        header.appendChild(buttonGroup);
     }
     viewContainer.appendChild(header);
     
@@ -267,8 +285,8 @@ export function renderReadingModeLoading(message: string = 'Loading analysis...'
 }
 
 /** Displays an error message. */
-export function showError(message: string, container: 'main' | 'analysis' = 'main') {
-    const errorHtml = `<p class="text-center text-red-600 dark:text-red-400 font-medium p-4">${message}</p>`;
+export function showError(message: string, container: 'main' | 'analysis' = 'main', detail?: string) {
+    const errorHtml = createErrorComponent(message, detail);
     if (container === 'analysis') {
         dom.analysisView.innerHTML = errorHtml;
     } else {

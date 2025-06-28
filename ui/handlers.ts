@@ -8,6 +8,7 @@ import { renderSingleAnalysis, renderReaderView, showError, renderHistoryPanel, 
 import { createFuriganaHTML } from './components.ts';
 import { setupSmartTooltip, hideTooltip, pinTooltipFor, isTooltipPinnedFor } from './tooltip.ts';
 import { setupJumpButtonAndObserver, ensureJumpButtonExists } from './jumpButton.ts';
+import { setupModal, showConfirmationModal, showAlertModal } from './modal.ts';
 
 // LocalStorage Keys
 const HISTORY_KEY = 'japanese-analyzer-history-v2';
@@ -122,7 +123,9 @@ function setupAnalysisDepthSlider() {
                         applyDisplayOptions();
                     })
                     .catch(e => {
-                        showError(e instanceof Error ? e.message : 'Unknown error', 'analysis');
+                        const error = e instanceof Error ? e : new Error(String(e));
+                        const { main, detail } = formatApiError(error);
+                        showError(main, 'analysis', detail);
                     });
             }
         }
@@ -229,6 +232,41 @@ function switchToReadingMode() {
     dom.readingModeView.classList.remove('hidden');
 }
 
+/** Creates a user-friendly error message object from a raw error. */
+function formatApiError(error: Error): { main: string, detail?: string } {
+    const message = error.message || '';
+    if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
+        return {
+            main: "The request to the AI model was rate-limited.",
+            detail: "This can happen if you process very large texts or make many requests in a short period. The app tried to retry automatically but was unsuccessful. Please wait a moment before trying again."
+        };
+    }
+    if (message.includes('API key not valid')) {
+        return {
+            main: "The Gemini API key is not valid.",
+            detail: "Please check the key in the settings menu. Make sure it has been copied correctly and is enabled for use."
+        };
+    }
+    if (message.includes('timed out')) {
+        return {
+            main: "The request to the AI model timed out.",
+            detail: "This could be due to a temporary network issue or the model taking too long to respond. Please try again in a moment."
+        };
+    }
+    // Generic fallback for other API errors
+    if (message.includes('GoogleGenAI') || message.includes('Request failed with status code')) {
+         return {
+            main: "An unexpected API error occurred.",
+            detail: message,
+        }
+    }
+    // For our own thrown errors like "API Key is not configured."
+    return {
+        main: message,
+    };
+}
+
+
 /** Fetches analysis for a sentence if not already cached, and saves it. */
 async function performAndCacheAnalysis(entry: state.TextEntry, sentence: string, depth: state.AnalysisDepth): Promise<any> {
     const cachedAnalysis = entry.analyzedSentences[sentence]?.[depth];
@@ -250,10 +288,8 @@ async function performAndCacheAnalysis(entry: state.TextEntry, sentence: string,
         return result;
     } catch (error) {
         console.error(`Analysis failed for: "${sentence}"`, error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        const errorResult = { error: errorMessage };
-        state.addAnalysisToCurrentText(sentence, errorResult, depth);
-        saveHistory();
+        // Do not cache the error. Just re-throw to be handled by the UI function.
+        // This allows the user to try analyzing the same sentence again.
         throw error;
     }
 }
@@ -289,9 +325,6 @@ async function startReadingMode(entry: state.TextEntry, sentenceIndex: number) {
     
     try {
         const analysis = await performAndCacheAnalysis(entry, sentence, state.analysisDepth);
-        if (analysis.error) {
-            throw new Error(analysis.error);
-        }
         
         renderReadingModeView(entry, sentenceIndex, analysis);
         applyDisplayOptions();
@@ -320,8 +353,9 @@ async function startReadingMode(entry: state.TextEntry, sentenceIndex: number) {
         
         await prefetchNextSentenceAnalysis(entry, sentenceIndex);
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during analysis.';
-        showError(errorMessage, 'main');
+        const err = error instanceof Error ? error : new Error('An unknown error occurred during analysis.');
+        const { main, detail } = formatApiError(err);
+        showError(main, 'main', detail);
     }
 }
 
@@ -331,6 +365,7 @@ function loadTextEntry(id: string) {
     if (!entry) return;
 
     switchToMainView();
+    dom.inputArea.classList.add('hidden');
 
     dom.textTitleInput.value = entry.title;
     dom.sentenceInput.value = entry.text;
@@ -349,6 +384,7 @@ function resetToNewTextView() {
     dom.textTitleInput.value = '';
     dom.sentenceInput.value = '';
     switchToMainView();
+    dom.inputArea.classList.remove('hidden');
     dom.readerView.innerHTML = '';
     dom.analysisView.innerHTML = '';
     localStorage.removeItem(UNSAVED_TITLE_KEY);
@@ -375,14 +411,14 @@ function setupHistoryPanel() {
 
     dom.clearHistoryButton.addEventListener('click', () => {
         if (state.textHistory.length === 0) return;
-        if (window.confirm('Are you sure you want to delete all your saved texts? This cannot be undone.')) {
+        showConfirmationModal('Are you sure you want to delete all your saved texts? This cannot be undone.', () => {
             state.clearAllHistory();
             saveHistory();
             renderHistoryPanel();
             if (state.currentTextEntryId) {
                 resetToNewTextView();
             }
-        }
+        }, { confirmText: 'Delete All' });
     });
 
     dom.historyList.addEventListener('click', (event) => {
@@ -403,7 +439,7 @@ function setupHistoryPanel() {
                 loadTextEntry(entryId);
                 break;
             case 'delete':
-                if (window.confirm(`Are you sure you want to delete "${entry.title}"?`)) {
+                showConfirmationModal(`Are you sure you want to delete "${entry.title}"?`, () => {
                     const wasCurrentEntry = state.currentTextEntryId === entryId;
                     state.removeTextEntry(entryId);
                     saveHistory();
@@ -411,7 +447,7 @@ function setupHistoryPanel() {
                     if (wasCurrentEntry) {
                         resetToNewTextView();
                     }
-                }
+                }, { confirmText: 'Delete' });
                 break;
         }
     });
@@ -448,7 +484,7 @@ function setupExampleSentenceHandler() {
         event.preventDefault();
 
         if (!state.apiKey) {
-            showError("API Key is not configured. Please add one in the settings menu.");
+            showError("API Key Not Found", 'analysis', "Please add your Gemini API key in the settings menu to generate examples.");
             return;
         }
 
@@ -498,7 +534,7 @@ function setupProcessButtonListener() {
     dom.button.addEventListener('click', async () => {
         const text = dom.sentenceInput.value;
         if (!text.trim()) {
-            showError('Please enter some Japanese text.', 'main');
+            showError('Input Required', 'main', 'Please enter some Japanese text to process.');
             return;
         }
         
@@ -544,8 +580,10 @@ function setupProcessButtonListener() {
         renderHistoryPanel();
         localStorage.setItem(UNSAVED_TITLE_KEY, title);
         localStorage.setItem(UNSAVED_TEXT_KEY, text);
+        
         const currentEntry = state.findTextEntryById(state.currentTextEntryId!)!;
         renderReaderView(currentEntry);
+        dom.inputArea.classList.add('hidden');
         dom.analysisView.innerHTML = `<p class="text-center p-8 text-slate-500">Select a sentence to analyze, or start reading mode.</p>`;
     });
 }
@@ -560,6 +598,14 @@ function setupMainViewListeners() {
                 const entry = state.findTextEntryById(state.currentTextEntryId);
                 if (entry) await startReadingMode(entry, entry.readingProgress);
             }
+            return;
+        }
+        
+        if (target.closest('#edit-text-button')) {
+            dom.inputArea.classList.remove('hidden');
+            dom.readerView.innerHTML = '';
+            dom.analysisView.innerHTML = '';
+            dom.inputArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
             return;
         }
 
@@ -587,7 +633,9 @@ function setupMainViewListeners() {
                     renderSingleAnalysis(dom.analysisView, result);
                     setupJumpButtonAndObserver();
                 } catch(e) {
-                    showError(e instanceof Error ? e.message : 'Unknown error', 'analysis');
+                    const error = e instanceof Error ? e : new Error(String(e));
+                    const { main, detail } = formatApiError(error);
+                    showError(main, 'analysis', detail);
                 }
             }
             applyDisplayOptions();
@@ -686,24 +734,29 @@ function setupDataManagement() {
                 const data = JSON.parse(e.target?.result as string);
                 if (!data.history || !data.settings) throw new Error("Invalid backup file structure.");
 
-                if (window.confirm("Importing will overwrite your current history and settings. Are you sure you want to continue?")) {
-                    state.setTextHistory(data.history);
-                    saveHistory();
+                showConfirmationModal(
+                    "Importing will overwrite your current history and settings. Are you sure you want to continue?",
+                    () => {
+                        state.setTextHistory(data.history);
+                        saveHistory();
 
-                    Object.keys(data.settings).forEach(key => {
-                        const value = data.settings[key];
-                        if (value !== null && value !== undefined) {
-                            localStorage.setItem(key, value);
-                        } else {
-                            localStorage.removeItem(key);
-                        }
-                    });
-                    
-                    alert("Import successful! The application will now reload to apply the new settings.");
-                    window.location.reload();
-                }
+                        Object.keys(data.settings).forEach(key => {
+                            const value = data.settings[key];
+                            if (value !== null && value !== undefined) {
+                                localStorage.setItem(key, value);
+                            } else {
+                                localStorage.removeItem(key);
+                            }
+                        });
+                        
+                        showAlertModal("Import successful! The application will now reload to apply the new settings.", () => {
+                            window.location.reload();
+                        });
+                    },
+                    { confirmText: "Import", confirmClass: "bg-sky-600 hover:bg-sky-700" }
+                );
             } catch (err) {
-                alert(`Import failed: ${err instanceof Error ? err.message : 'Could not read file.'}`);
+                showAlertModal(`Import failed: ${err instanceof Error ? err.message : 'Could not read file.'}`);
             } finally {
                 // Reset file input so the same file can be imported again
                 dom.importFileInput.value = '';
@@ -750,5 +803,6 @@ export function initializeApp() {
     setupReadingModeListeners();
     setupNewTextButton();
     setupDataManagement();
+    setupModal();
     applyDisplayOptions();
 }

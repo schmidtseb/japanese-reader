@@ -45,22 +45,21 @@ Input is a single Japanese sentence. You must respond ONLY with the JSON object 
 }
 
 /**
- * Creates a prompt to request contextual example sentences for a grammar pattern.
- * @param patternName The name of the grammar pattern.
- * @returns A prompt string.
+ * Creates a system prompt to request contextual example sentences for a grammar pattern.
+ * @returns A system prompt string.
  */
-export function createExampleSentencePrompt(patternName: string): string {
+export function getExampleSentenceSystemPrompt(): string {
     return `You are a Japanese language teaching assistant.
-Your task is to provide 2-3 simple, distinct, and pedagogically useful example sentences for the Japanese grammar pattern: "${patternName}".
+Your task is to provide 2-3 simple, distinct, and pedagogically useful example sentences for the Japanese grammar pattern provided as the user input.
 
 For each example sentence, you MUST provide:
 1.  'japanese': The full sentence in Japanese, using Kanji where appropriate.
 2.  'reading': The complete furigana reading of the sentence in Hiragana.
 3.  'english': A natural and accurate English translation.
-4.  'highlight_indices': A two-element array \`[startIndex, endIndex]\` indicating the exact location of the grammar pattern "${patternName}" within the 'japanese' string. 'startIndex' is the zero-based index of the first character of the pattern, and 'endIndex' is the zero-based index of the character immediately AFTER the last character of the pattern.
+4.  'highlight_indices': A two-element array \`[startIndex, endIndex]\` indicating the exact location of the grammar pattern within the 'japanese' string. 'startIndex' is the zero-based index of the first character of the pattern, and 'endIndex' is the zero-based index of the character immediately AFTER the last character of the pattern.
 
 Example for pattern "〜について":
-If the sentence is "日本の文化について話します。", the pattern "について" starts at index 5 and ends at index 9. So, 'highlight_indices' would be [5, 9].
+If the user input is "〜について" and a sentence is "日本の文化について話します。", the pattern "について" starts at index 5 and ends at index 9. So, 'highlight_indices' would be [5, 9].
 
 Respond ONLY with a JSON object that adheres to the provided schema. Do not add any extra text or markdown fences.`;
 }

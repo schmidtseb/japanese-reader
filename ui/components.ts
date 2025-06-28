@@ -96,3 +96,27 @@ export function createPitchAccentVisualizer(reading: string, pitchAccent: string
     svg.setAttribute('preserveAspectRatio', 'none');
     return svg;
 }
+
+/**
+ * Creates an HTML string for a styled error message component.
+ * @param message The main error message.
+ * @param detail Optional secondary text for more details.
+ * @returns An HTML string for the error component.
+ */
+export function createErrorComponent(message: string, detail?: string): string {
+  return `
+    <div role="alert" class="p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-600 rounded-r-lg shadow-md my-4 transition-all duration-300">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-500 dark:text-red-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3 flex-1">
+          <p class="text-sm font-semibold text-red-800 dark:text-red-200">${message}</p>
+          ${detail ? `<div class="mt-2 text-sm text-red-700 dark:text-red-300"><p>${detail}</p></div>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
