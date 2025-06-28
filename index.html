@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Japanese Sentence Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'pattern-0': { DEFAULT: '#1e88e5', DARK: '#90caf9' },
+            'pattern-1': { DEFAULT: '#43a047', DARK: '#a5d6a7' },
+            'pattern-2': { DEFAULT: '#fb8c00', DARK: '#ffcc80' },
+            'pattern-3': { DEFAULT: '#8e24aa', DARK: '#ce93d8' },
+            'pattern-4': { DEFAULT: '#d81b60', DARK: '#f48fb1' },
+            'pattern-5': { DEFAULT: '#00897b', DARK: '#80cbc4' },
+            'pattern-6': { DEFAULT: '#e53935', DARK: '#ef9a9a' },
+            'pattern-7': { DEFAULT: '#3949ab', DARK: '#9fa8da' },
+            'pattern-8': { DEFAULT: '#039be5', DARK: '#81d4fa' },
+            'pattern-9': { DEFAULT: '#ffb300', DARK: '#ffe082' },
+            'pattern-10': { DEFAULT: '#f4511e', DARK: '#ffab91' },
+            'pattern-11': { DEFAULT: '#546e7a', DARK: '#b0bec5' },
+          }
+        }
+      }
+    }
+  </script>
+  <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.sh/@google/genai@^0.15.0"
+      }
+    }
+  </script>
+  <script>
+    // Apply theme from localStorage immediately to prevent FOUC
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      /* Custom utility to handle multiple background gradients for underlines */
+      /* This is a helper, but the final style is set via JS because it's dynamic */
+      .grammar-pattern {
+        @apply bg-no-repeat;
+        background-origin: border-box; 
+      }
+      /* Custom styles for the range slider thumb */
+      input[type=range]::-webkit-slider-thumb {
+        @apply w-4 h-4 bg-sky-600 rounded-full appearance-none cursor-pointer transition-colors;
+      }
+      input[type=range]::-moz-range-thumb {
+        @apply w-4 h-4 bg-sky-600 rounded-full cursor-pointer border-none transition-colors;
+      }
+    }
+    body {
+      @apply bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-300;
+    }
+    /* Hide TTS button if no voices are available */
+    body:not(.tts-available) .tts-button {
+      @apply hidden;
+    }
+    /* Simple scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      @apply bg-slate-400 dark:bg-slate-500;
+    }
+  </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="p-2 sm:p-4 flex justify-center items-start min-h-screen">
+  <main id="app" class="bg-white dark:bg-slate-800 p-4 sm:p-6 md:p-8 rounded-xl shadow-lg max-w-4xl w-full transition-all duration-300">
+    
+    <header class="flex justify-end items-center mb-4 gap-2">
+      <button id="new-text-button" title="New Text" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+      <button id="history-button" title="My Texts" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </button>
+      <div class="relative">
+        <button id="settings-button" title="Settings" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800 focus:ring-sky-500 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+        <div id="settings-menu" class="hidden absolute top-full right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-20 origin-top-right">
+          <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="settings-button">
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <label for="pitch-accent-checkbox" class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-grow cursor-pointer">Pitch Accent</label>
+              <label for="pitch-accent-checkbox" title="Toggle pitch accent visualization" class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="pitch-accent-checkbox" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 dark:peer-focus:ring-sky-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-sky-600"></div>
+              </label>
+            </div>
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <label for="furigana-checkbox" class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-grow cursor-pointer">Furigana</label>
+              <label for="furigana-checkbox" title="Toggle furigana visibility" class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="furigana-checkbox" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 dark:peer-focus:ring-sky-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-sky-600"></div>
+              </label>
+            </div>
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <label for="theme-checkbox" class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-grow cursor-pointer">Dark Mode</label>
+              <label for="theme-checkbox" title="Toggle dark mode" class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="theme-checkbox" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 dark:peer-focus:ring-sky-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-sky-600"></div>
+              </label>
+            </div>
+            <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+              <div class="flex items-center justify-between mb-2">
+                <label for="analysis-depth-slider" class="text-sm font-medium text-slate-700 dark:text-slate-300">Analysis Depth</label>
+                <span id="analysis-depth-label" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600">Medium</span>
+              </div>
+              <input type="range" id="analysis-depth-slider" min="0" max="2" step="1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700">
+            </div>
+             <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Data Management</p>
+              <div class="flex gap-2">
+                <button id="export-data-button" class="flex-1 text-xs text-center font-semibold px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">Export Data</button>
+                <label for="import-file-input" id="import-data-button" class="flex-1 text-xs text-center font-semibold px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">Import Data</label>
+                <input type="file" id="import-file-input" class="hidden" accept=".json">
+              </div>
+            </div>
+            <div class="px-4 py-3">
+              <label for="api-key-input" class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Gemini API Key</label>
+              <div class="flex gap-2">
+                <input type="password" id="api-key-input" placeholder="Using built-in key" class="flex-grow block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white dark:bg-slate-700 p-2 text-xs">
+                <button id="save-api-key-button" class="text-xs font-semibold px-3 py-1.5 rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 dark:bg-sky-500 dark:hover:bg-sky-600 dark:text-slate-900">Save</button>
+              </div>
+              <p id="api-key-status" class="text-xs text-slate-500 dark:text-slate-400 mt-2"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+    <div class="input-area mb-4">
+      <div class="mb-4">
+        <label for="text-title-input" class="sr-only">Title</label>
+        <input type="text" id="text-title-input" placeholder="Enter a title for your text..." class="block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-lg bg-white dark:bg-slate-900/50 p-3 font-semibold">
+      </div>
+      <textarea id="sentence-input" placeholder="Enter Japanese text here. e.g., 猫が大好きです。犬も好きです。" rows="4" class="block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white dark:bg-slate-900/50 p-3"></textarea>
+      <button id="generate-button" class="mt-4 w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 dark:bg-sky-500 dark:hover:bg-sky-600 dark:text-slate-900 dark:font-semibold disabled:bg-slate-400 disabled:cursor-not-allowed">Save & Process Text</button>
+    </div>
+    
+    <div id="result-container" aria-live="polite" class="mt-6">
+      <!-- Main view for editor/multi-sentence reader -->
+      <div id="main-view">
+        <div id="reader-view"></div>
+        <div id="analysis-view"></div>
+      </div>
+      <!-- View for focused sentence-by-sentence reading -->
+      <div id="reading-mode-view" class="hidden">
+        <!-- Reading mode UI will be dynamically generated here -->
+      </div>
+    </div>
+  </main>
+  <div id="history-panel" class="fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <header class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+        <h2 class="text-lg font-semibold">My Texts</h2>
+        <div class="flex items-center gap-2">
+            <button id="clear-history-button" title="Delete All Texts" class="text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-500 transition-colors">Delete All</button>
+            <button id="close-history-button" title="Close Panel" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </header>
+    <div class="flex-grow overflow-y-auto">
+        <ul id="history-list" class="divide-y divide-slate-200 dark:divide-slate-700">
+            <!-- History items will be injected here -->
+        </ul>
+        <p id="history-empty-message" class="text-center p-8 text-slate-500 hidden">You have no saved texts.</p>
+    </div>
+  </div>
+  <div id="history-panel-overlay" class="fixed inset-0 bg-black/30 z-30 transition-opacity opacity-0 invisible"></div>
+  <div id="tooltip" class="fixed z-50 max-w-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl p-3 text-sm transition-opacity duration-200 opacity-0 invisible pointer-events-none max-h-[40vh] overflow-y-auto"></div>
+  <script type="module" src="index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
