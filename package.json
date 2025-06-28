@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "predeploy": "yarn build",
-    "deploy": "gh-pages -d build"  
+    "deploy": "gh-pages -d dist"  
   },
   "dependencies": {
     "@google/genai": "^0.15.0"
