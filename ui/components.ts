@@ -13,7 +13,7 @@ export function getCategoryClass(category: string): string {
     grammatical: 'bg-cyan-100 dark:bg-cyan-900/60 text-cyan-800 dark:text-cyan-200',
     conjunction: 'bg-pink-100 dark:bg-pink-900/60 text-pink-800 dark:text-pink-200',
     punctuation: 'bg-transparent',
-    unknown: 'bg-slate-100 dark:bg-slate-700'
+    unknown: 'bg-neutral-100 dark:bg-neutral-700'
   };
   return classMap[cat] || classMap.unknown;
 }
@@ -22,7 +22,7 @@ export function getCategoryClass(category: string): string {
 export function createInteractiveText(text: string): string {
     return text.split('').map(char => {
         if (/[一-龯]/.test(char)) { 
-            return `<a href="https://jisho.org/search/${encodeURIComponent(char)}%20%23kanji" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-400/50 decoration-1 underline-offset-2 hover:text-sky-500 hover:decoration-sky-500 transition">${char}</a>`;
+            return `<a href="https://jisho.org/search/${encodeURIComponent(char)}%20%23kanji" target="_blank" rel="noopener noreferrer" class="underline decoration-neutral-400/50 decoration-1 underline-offset-2 hover:text-sky-500 hover:decoration-sky-500 transition">${char}</a>`;
         }
         return char;
     }).join('');
@@ -54,7 +54,7 @@ export function createFuriganaHTML(base: string, reading: string, createLinks: b
       }
       
       const finalBasePart = createLinks ? createInteractiveText(part) : part;
-      html += (kanjiReading && kanjiReading !== part) ? `<ruby>${finalBasePart}<rt class="text-xs text-slate-500 select-none">${kanjiReading}</rt></ruby>` : finalBasePart;
+      html += (kanjiReading && kanjiReading !== part) ? `<ruby>${finalBasePart}<rt class="text-xs text-neutral-500 select-none">${kanjiReading}</rt></ruby>` : finalBasePart;
     } else { // Is Kana
       html += part;
       if (reading.substring(readingIndex).startsWith(part)) readingIndex += part.length;
@@ -76,7 +76,7 @@ export function createPitchAccentVisualizer(reading: string, pitchAccent: string
     if (points.length > 1) {
         const polyline = document.createElementNS(svgNS, 'polyline');
         polyline.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' '));
-        polyline.setAttribute('class', 'fill-none stroke-slate-500 dark:stroke-slate-400');
+        polyline.setAttribute('class', 'fill-none stroke-neutral-500 dark:stroke-neutral-400');
         polyline.setAttribute('stroke-width', '1.5');
         polyline.setAttribute('stroke-linecap', 'round');
         polyline.setAttribute('stroke-linejoin', 'round');
@@ -88,7 +88,7 @@ export function createPitchAccentVisualizer(reading: string, pitchAccent: string
         circle.setAttribute('cx', String(p.x));
         circle.setAttribute('cy', String(p.y));
         circle.setAttribute('r', '1.2');
-        circle.setAttribute('class', 'fill-slate-500 dark:fill-slate-400');
+        circle.setAttribute('class', 'fill-neutral-500 dark:fill-neutral-400');
         svg.appendChild(circle);
     });
 

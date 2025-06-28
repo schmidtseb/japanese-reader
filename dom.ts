@@ -18,6 +18,9 @@ export const settingsButton = document.getElementById('settings-button') as HTML
 export const settingsMenu = document.getElementById('settings-menu') as HTMLDivElement;
 export const analysisDepthSlider = document.getElementById('analysis-depth-slider') as HTMLInputElement;
 export const analysisDepthLabel = document.getElementById('analysis-depth-label') as HTMLSpanElement;
+export const fontSizeSlider = document.getElementById('font-size-slider') as HTMLInputElement;
+export const fontSizeLabel = document.getElementById('font-size-label') as HTMLSpanElement;
+export const appHeader = document.getElementById('app-header') as HTMLElement;
 
 // Header buttons
 export const newTextButton = document.getElementById('new-text-button') as HTMLButtonElement;
@@ -47,6 +50,6 @@ export const modalConfirmButton = document.getElementById('modal-confirm-button'
 export const modalCancelButton = document.getElementById('modal-cancel-button') as HTMLButtonElement;
 
 
-if (!button || !sentenceInput || !textTitleInput || !resultContainer || !inputArea || !mainView || !readerView || !analysisView || !readingModeView || !themeCheckbox || !furiganaCheckbox || !pitchAccentCheckbox || !tooltip || !settingsButton || !settingsMenu || !newTextButton || !historyButton || !historyPanel || !closeHistoryButton || !clearHistoryButton || !historyList || !historyEmptyMessage || !historyPanelOverlay || !analysisDepthSlider || !analysisDepthLabel || !exportDataButton || !importDataButton || !importFileInput || !apiKeyInput || !saveApiKeyButton || !apiKeyStatus || !modalOverlay || !modalBox || !modalMessage || !modalConfirmButton || !modalCancelButton) {
+if (!button || !sentenceInput || !textTitleInput || !resultContainer || !inputArea || !mainView || !readerView || !analysisView || !readingModeView || !themeCheckbox || !furiganaCheckbox || !pitchAccentCheckbox || !tooltip || !settingsButton || !settingsMenu || !newTextButton || !historyButton || !historyPanel || !closeHistoryButton || !clearHistoryButton || !historyList || !historyEmptyMessage || !historyPanelOverlay || !analysisDepthSlider || !analysisDepthLabel || !fontSizeSlider || !fontSizeLabel || !exportDataButton || !importDataButton || !importFileInput || !apiKeyInput || !saveApiKeyButton || !apiKeyStatus || !modalOverlay || !modalBox || !modalMessage || !modalConfirmButton || !modalCancelButton || !appHeader) {
   throw new Error('Required HTML elements not found at startup.');
 }

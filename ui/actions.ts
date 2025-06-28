@@ -1,0 +1,137 @@
+// ui/actions.ts
+import * as dom from '../dom.ts';
+import * as state from '../state.ts';
+import { analyzeSentence } from '../services/gemini.ts';
+import { renderSingleAnalysis } from './render/analysis.ts';
+import { renderReaderView, renderReadingModeView, renderReadingModeLoading } from './render/reader.ts';
+import { renderHistoryPanel } from './render/history.ts';
+import { applyDisplayOptions, updateProcessButtonState, switchToMainView, switchToReadingMode, formatApiError } from './view.ts';
+import { showError } from './render/common.ts';
+import { hideTooltip } from './tooltip.ts';
+import { ensureJumpButtonExists } from './jumpButton.ts';
+import { saveHistory } from './controllers/history.ts';
+
+/** Fetches analysis for a sentence if not already cached, and saves it. */
+export async function performAndCacheAnalysis(entry: state.TextEntry, sentence: string, depth: state.AnalysisDepth): Promise<any> {
+    const cachedAnalysis = entry.analyzedSentences[sentence]?.[depth];
+    if (cachedAnalysis) {
+        return cachedAnalysis;
+    }
+
+    if (!state.apiKey) {
+        throw new Error("API Key is not configured. Please add one in the settings menu.");
+    }
+    
+    try {
+        const result = await analyzeSentence(state.apiKey, sentence.trim(), depth);
+        
+        state.addAnalysisToCurrentText(sentence, result, depth);
+        saveHistory();
+        renderHistoryPanel();
+        
+        return result;
+    } catch (error) {
+        console.error(`Analysis failed for: "${sentence}"`, error);
+        // Do not cache the error. Just re-throw to be handled by the UI function.
+        // This allows the user to try analyzing the same sentence again.
+        throw error;
+    }
+}
+
+/** Fetches analysis for the next sentence in the background. */
+async function prefetchNextSentenceAnalysis(entry: state.TextEntry, currentIndex: number) {
+    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex < sentences.length) {
+        const nextSentence = sentences[nextIndex];
+        if (!entry.analyzedSentences[nextSentence]?.[state.analysisDepth]) {
+            console.log(`Prefetching analysis for: "${nextSentence}"`);
+            performAndCacheAnalysis(entry, nextSentence, state.analysisDepth).catch(err => {
+                console.warn(`Prefetch failed for sentence ${nextIndex + 1}:`, err.message);
+            });
+        }
+    }
+}
+
+/** Initializes and displays the Reading Mode UI for a given text entry and sentence. */
+export async function startReadingMode(entry: state.TextEntry, sentenceIndex: number) {
+    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+    if (sentenceIndex >= sentences.length || sentences.length === 0) {
+        loadTextEntry(entry.id);
+        return;
+    }
+
+    const sentence = sentences[sentenceIndex];
+    const totalSentences = sentences.length;
+    
+    switchToReadingMode();
+    renderReadingModeLoading(sentenceIndex, totalSentences);
+    
+    try {
+        const analysis = await performAndCacheAnalysis(entry, sentence, state.analysisDepth);
+        
+        renderReadingModeView(entry, sentenceIndex, analysis);
+        applyDisplayOptions();
+
+        if (state.analysisHeaderObserver) state.analysisHeaderObserver.disconnect();
+        if (state.readingModeScrollListener) window.removeEventListener('scroll', state.readingModeScrollListener);
+        
+        ensureJumpButtonExists();
+        const button = state.jumpToSentenceButton;
+        if (button) {
+            button.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+            button.title = 'Scroll to top';
+            button.classList.add('opacity-0', 'invisible', 'translate-y-5');
+
+            const scrollHandler = () => {
+                if (dom.readingModeView.classList.contains('hidden')) return;
+                const shouldBeVisible = window.scrollY > window.innerHeight / 2;
+                button.classList.toggle('opacity-0', !shouldBeVisible);
+                button.classList.toggle('invisible', !shouldBeVisible);
+                button.classList.toggle('translate-y-5', !shouldBeVisible);
+            };
+            
+            window.addEventListener('scroll', scrollHandler);
+            state.setReadingModeScrollListener(scrollHandler);
+        }
+        
+        await prefetchNextSentenceAnalysis(entry, sentenceIndex);
+    } catch (error) {
+        const err = error instanceof Error ? error : new Error('An unknown error occurred during analysis.');
+        const { main, detail } = formatApiError(err);
+        showError(main, 'main', detail);
+    }
+}
+
+/** Loads a text entry into the main editor view. */
+export function loadTextEntry(id: string) {
+    const entry = state.findTextEntryById(id);
+    if (!entry) return;
+
+    switchToMainView();
+    dom.inputArea.classList.add('hidden');
+
+    dom.textTitleInput.value = entry.title;
+    dom.sentenceInput.value = entry.text;
+    
+    state.setCurrentTextEntryId(id);
+
+    renderReaderView(entry);
+    dom.analysisView.innerHTML = `<p class="text-center p-8 text-slate-500">Select a sentence to analyze, or start reading mode.</p>`;
+    updateProcessButtonState();
+}
+
+/** Clears the main view and resets state to the default new text view. */
+export function resetToNewTextView() {
+    dom.textTitleInput.value = '';
+    dom.sentenceInput.value = '';
+    switchToMainView();
+    dom.inputArea.classList.remove('hidden');
+    dom.readerView.innerHTML = '';
+    dom.analysisView.innerHTML = '';
+    
+    state.setCurrentTextEntryId(null);
+    hideTooltip();
+    updateProcessButtonState();
+}

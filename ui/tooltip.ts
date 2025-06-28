@@ -30,25 +30,25 @@ function showTooltip(segment: HTMLElement) {
             .split('-')
             .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
             .join(', ');
-        wordInfoHtml += `<p class="text-xs text-slate-600 dark:text-slate-400"><strong class="font-medium text-slate-800 dark:text-slate-200">Category:</strong> ${formattedCategory}</p>`;
+        wordInfoHtml += `<p class="text-xs text-neutral-600 dark:text-neutral-400"><strong class="font-medium text-neutral-800 dark:text-neutral-200">Category:</strong> ${formattedCategory}</p>`;
     }
 
-    wordInfoHtml += `<p class="text-xs text-slate-600 dark:text-slate-400 mt-1"><strong class="font-medium text-slate-800 dark:text-slate-200">Reading:</strong> ${reading || 'N/A'}</p>`;
-    wordInfoHtml += `<p class="text-xs text-slate-600 dark:text-slate-400 mt-1"><strong class="font-medium text-slate-800 dark:text-slate-200">English:</strong> ${english || 'N/A'}</p>`;
+    wordInfoHtml += `<p class="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><strong class="font-medium text-neutral-800 dark:text-neutral-200">Reading:</strong> ${reading || 'N/A'}</p>`;
+    wordInfoHtml += `<p class="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><strong class="font-medium text-neutral-800 dark:text-neutral-200">English:</strong> ${english || 'N/A'}</p>`;
 
     if (wordUrl && wordUrl.includes('http')) { // Basic validation
         wordInfoHtml += `<div class="mt-2"><a href="${wordUrl}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1">Search on Jisho <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a></div>`;
     }
     
     if (wordInfoHtml) {
-        tooltipHtml += `<div class="mb-3"><h4 class="text-sm font-semibold border-b border-slate-200 dark:border-slate-700 pb-1 mb-1">Word Info</h4>${wordInfoHtml}</div>`;
+        tooltipHtml += `<div class="mb-3"><h4 class="text-sm font-semibold border-b border-neutral-200 dark:border-neutral-700 pb-1 mb-1">Word Info</h4>${wordInfoHtml}</div>`;
     }
 
 
     if (patternsJson) {
       try {
         JSON.parse(patternsJson).forEach((p: any) => {
-          tooltipHtml += `<div class="mb-2 last:mb-0"><div class="flex items-center gap-2 mb-1"><span class="flex-shrink-0 w-3 h-3 rounded-sm ${p.colorClass}"></span><h4 class="font-semibold text-sky-600 dark:text-sky-400">${p.name}</h4></div><p class="text-xs text-slate-600 dark:text-slate-400">${p.explanation}</p></div>`;
+          tooltipHtml += `<div class="mb-2 last:mb-0"><div class="flex items-center gap-2 mb-1"><span class="flex-shrink-0 w-3 h-3 rounded-sm ${p.colorClass}"></span><h4 class="font-semibold text-sky-600 dark:text-sky-400">${p.name}</h4></div><p class="text-xs text-neutral-600 dark:text-neutral-400">${p.explanation}</p></div>`;
         });
       } catch (e) {
         console.error("Failed to parse patterns JSON", e);
