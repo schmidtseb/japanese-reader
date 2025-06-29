@@ -51,8 +51,11 @@ export function showConfirmationModal(
 
   // Set up confirm button
   dom.modalConfirmButton.textContent = options.confirmText || 'Confirm';
-  dom.modalConfirmButton.className = 'px-4 py-2 rounded-md text-sm font-medium text-white transition ';
-  dom.modalConfirmButton.classList.add(...(options.confirmClass?.split(' ') || ['bg-red-600', 'hover:bg-red-700']));
+  // Reset classes first
+  dom.modalConfirmButton.className = 'px-5 py-3 rounded-xl text-base font-medium text-primary-text transition-colors shadow-lg';
+  // Add new classes
+  const confirmClasses = options.confirmClass?.split(' ') || ['bg-destructive', 'hover:bg-destructive-hover'];
+  dom.modalConfirmButton.classList.add(...confirmClasses);
   
   // Set up cancel button
   dom.modalCancelButton.textContent = options.cancelText || 'Cancel';
@@ -74,8 +77,8 @@ export function showAlertModal(message: string, onOk?: () => void) {
   
   // Configure the confirm button to act as an "OK" button
   dom.modalConfirmButton.textContent = 'OK';
-  dom.modalConfirmButton.className = 'px-4 py-2 rounded-md text-sm font-medium text-white transition ';
-  dom.modalConfirmButton.classList.add('bg-sky-600', 'hover:bg-sky-700');
+  dom.modalConfirmButton.className = 'px-5 py-3 rounded-xl text-base font-medium text-primary-text transition-colors shadow-lg';
+  dom.modalConfirmButton.classList.add('bg-accent', 'hover:bg-accent/90');
   
   // Hide the cancel button for simple alerts
   dom.modalCancelButton.classList.add('hidden');

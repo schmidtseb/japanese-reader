@@ -1,3 +1,4 @@
+
 // ui/actions.ts
 import * as dom from '../dom.ts';
 import * as state from '../state.ts';
@@ -10,6 +11,9 @@ import { showError } from './render/common.ts';
 import { hideTooltip } from './tooltip.ts';
 import { ensureJumpButtonExists } from './jumpButton.ts';
 import { saveHistory } from './controllers/history.ts';
+import { createErrorComponent } from './components.ts';
+
+const analysisInProgress = new Set<string>();
 
 /** Fetches analysis for a sentence if not already cached, and saves it. */
 export async function performAndCacheAnalysis(entry: state.TextEntry, sentence: string, depth: state.AnalysisDepth): Promise<any> {
@@ -57,51 +61,106 @@ async function prefetchNextSentenceAnalysis(entry: state.TextEntry, currentIndex
 /** Initializes and displays the Reading Mode UI for a given text entry and sentence. */
 export async function startReadingMode(entry: state.TextEntry, sentenceIndex: number) {
     const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
-    if (sentenceIndex >= sentences.length || sentences.length === 0) {
+    if (sentenceIndex < 0 || sentenceIndex >= sentences.length || sentences.length === 0) {
         loadTextEntry(entry.id);
         return;
     }
 
     const sentence = sentences[sentenceIndex];
-    const totalSentences = sentences.length;
     
     switchToReadingMode();
-    renderReadingModeLoading(sentenceIndex, totalSentences);
-    
-    try {
-        const analysis = await performAndCacheAnalysis(entry, sentence, state.analysisDepth);
-        
+    const analysis = entry.analyzedSentences[sentence]?.[state.analysisDepth];
+
+    if (analysis) {
         renderReadingModeView(entry, sentenceIndex, analysis);
-        applyDisplayOptions();
-
-        if (state.analysisHeaderObserver) state.analysisHeaderObserver.disconnect();
-        if (state.readingModeScrollListener) window.removeEventListener('scroll', state.readingModeScrollListener);
-        
-        ensureJumpButtonExists();
-        const button = state.jumpToSentenceButton;
-        if (button) {
-            button.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-            button.title = 'Scroll to top';
-            button.classList.add('opacity-0', 'invisible', 'translate-y-5');
-
-            const scrollHandler = () => {
-                if (dom.readingModeView.classList.contains('hidden')) return;
-                const shouldBeVisible = window.scrollY > window.innerHeight / 2;
-                button.classList.toggle('opacity-0', !shouldBeVisible);
-                button.classList.toggle('invisible', !shouldBeVisible);
-                button.classList.toggle('translate-y-5', !shouldBeVisible);
-            };
-            
-            window.addEventListener('scroll', scrollHandler);
-            state.setReadingModeScrollListener(scrollHandler);
-        }
-        
-        await prefetchNextSentenceAnalysis(entry, sentenceIndex);
-    } catch (error) {
-        const err = error instanceof Error ? error : new Error('An unknown error occurred during analysis.');
-        const { main, detail } = formatApiError(err);
-        showError(main, 'main', detail);
+    } else {
+        renderReadingModeLoading(entry, sentenceIndex);
     }
+    
+    // Common setup logic after initial render
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    applyDisplayOptions();
+
+    if (state.analysisHeaderObserver) state.analysisHeaderObserver.disconnect();
+    if (state.readingModeScrollListener) window.removeEventListener('scroll', state.readingModeScrollListener);
+    
+    ensureJumpButtonExists();
+    const button = state.jumpToSentenceButton;
+    if (button) {
+        button.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+        button.title = 'Scroll to top';
+        button.classList.add('opacity-0', 'invisible', 'translate-y-5');
+
+        const scrollHandler = () => {
+            if (dom.readingModeView.classList.contains('hidden')) return;
+            const shouldBeVisible = window.scrollY > window.innerHeight / 2;
+            button.classList.toggle('opacity-0', !shouldBeVisible);
+            button.classList.toggle('invisible', !shouldBeVisible);
+            button.classList.toggle('translate-y-5', !shouldBeVisible);
+        };
+        
+        window.addEventListener('scroll', scrollHandler);
+        state.setReadingModeScrollListener(scrollHandler);
+    }
+    
+    // Fetch if needed
+    if (!analysis) {
+        if (analysisInProgress.has(sentence)) {
+            console.log(`Analysis for "${sentence}" is already in progress.`);
+            return;
+        }
+
+        try {
+            analysisInProgress.add(sentence);
+            const result = await performAndCacheAnalysis(entry, sentence, state.analysisDepth);
+            
+            // Check if we are still on the same page before rendering
+            const currentSentenceInput = dom.readingModeView.querySelector<HTMLInputElement>('#reading-mode-sentence-input');
+            if (currentSentenceInput && parseInt(currentSentenceInput.value, 10) === sentenceIndex + 1) {
+                const contentWrapper = dom.readingModeView.querySelector<HTMLElement>('#reading-mode-content-wrapper');
+                if (contentWrapper) {
+                    contentWrapper.style.transition = 'opacity 0.2s ease-in-out';
+                    contentWrapper.style.opacity = '0';
+                    
+                    await new Promise(resolve => setTimeout(resolve, 200));
+
+                    // Just update the analysis content, not the whole page shell
+                    renderSingleAnalysis(contentWrapper, result, { stickyTopClass: 'top-14' });
+                    
+                    // The loading state disables the 'next' button, so we re-evaluate its state
+                    const totalSentences = sentences.length;
+                    const nextBtn = dom.readingModeView.querySelector<HTMLButtonElement>('#reading-nav-next');
+                    if (nextBtn) {
+                        nextBtn.disabled = sentenceIndex >= totalSentences - 1;
+                    }
+                    
+                    applyDisplayOptions();
+                    
+                    contentWrapper.style.opacity = '1';
+                    setTimeout(() => { contentWrapper.style.transition = ''; }, 250);
+                } else {
+                    // Fallback to full render if the wrapper is somehow not found
+                    renderReadingModeView(entry, sentenceIndex, result);
+                    applyDisplayOptions();
+                }
+            }
+        } catch (error) {
+            const err = error instanceof Error ? error : new Error('An unknown error occurred during analysis.');
+            const { main, detail } = formatApiError(err);
+
+            const contentWrapper = dom.readingModeView.querySelector<HTMLElement>('#reading-mode-content-wrapper');
+            if (contentWrapper) {
+                 contentWrapper.innerHTML = createErrorComponent(main, detail);
+            } else {
+                showError(main, 'main', detail); // Fallback
+            }
+        } finally {
+            analysisInProgress.delete(sentence);
+        }
+    }
+    
+    // Always try to prefetch next
+    await prefetchNextSentenceAnalysis(entry, sentenceIndex);
 }
 
 /** Loads a text entry into the main editor view. */

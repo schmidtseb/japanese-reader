@@ -1,4 +1,3 @@
-
 // ui/controllers/settings.ts
 import * as dom from '../../dom.ts';
 import * as state from '../../state.ts';
@@ -80,13 +79,13 @@ function applyAllSettings() {
     if (storedKey) {
         dom.apiKeyInput.placeholder = 'API key saved';
         dom.apiKeyStatus.textContent = 'Using key from local storage.';
-        dom.apiKeyStatus.classList.remove('text-amber-500', 'font-semibold');
+        dom.apiKeyStatus.classList.remove('text-warning-text', 'font-semibold');
     } else if (process.env.API_KEY) {
         dom.apiKeyStatus.textContent = 'Using built-in API key.';
-        dom.apiKeyStatus.classList.remove('text-amber-500', 'font-semibold');
+        dom.apiKeyStatus.classList.remove('text-warning-text', 'font-semibold');
     } else {
         dom.apiKeyStatus.textContent = 'No API key found. Please add one.';
-        dom.apiKeyStatus.classList.add('text-amber-500', 'font-semibold');
+        dom.apiKeyStatus.classList.add('text-warning-text', 'font-semibold');
     }
     updateProcessButtonState();
 }
@@ -156,7 +155,7 @@ function setupAnalysisDepthSlider() {
             const selectedSentenceEl = dom.readerView.querySelector<HTMLElement>('.clickable-sentence.selected');
             if (selectedSentenceEl?.dataset.sentence) {
                 const sentence = selectedSentenceEl.dataset.sentence;
-                dom.analysisView.innerHTML = `<p class="text-center p-8 text-slate-500">Analyzing with new '${newDepth}' setting...</p>`;
+                dom.analysisView.innerHTML = `<p class="text-center p-8 text-text-muted">Analyzing with new '${newDepth}' setting...</p>`;
                 performAndCacheAnalysis(entry, sentence, newDepth)
                     .then(result => {
                         renderSingleAnalysis(dom.analysisView, result);
@@ -196,7 +195,7 @@ function setupApiKeyManager() {
             dom.apiKeyInput.value = '';
             dom.apiKeyInput.placeholder = 'API key saved';
             dom.apiKeyStatus.textContent = '✅ Key saved and is now active.';
-            dom.apiKeyStatus.classList.remove('text-amber-500', 'font-semibold');
+            dom.apiKeyStatus.classList.remove('text-warning-text', 'font-semibold');
         } else {
             localStorage.removeItem(API_KEY_KEY);
             state.setApiKey(process.env.API_KEY || null);
@@ -270,7 +269,7 @@ function setupDataManagement() {
                         // 5. Inform user.
                         showAlertModal("Import successful! Your data and settings have been updated.");
                     },
-                    { confirmText: "Import", confirmClass: "bg-sky-600 hover:bg-sky-700" }
+                    { confirmText: "Import", confirmClass: "bg-accent hover:bg-accent/90" }
                 );
             } catch (err) {
                 showAlertModal(`Import failed: ${err instanceof Error ? err.message : 'Could not read file.'}`);

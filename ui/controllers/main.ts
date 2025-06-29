@@ -1,4 +1,3 @@
-
 // ui/controllers/main.ts
 import * as dom from '../../dom.ts';
 import * as state from '../../state.ts';
@@ -6,7 +5,7 @@ import { getExampleSentences } from '../../services/gemini.ts';
 import { createFuriganaHTML } from '../components.ts';
 import { setupJumpButtonAndObserver } from '../jumpButton.ts';
 import { hideTooltip, isTooltipPinnedFor, pinTooltipFor } from '../tooltip.ts';
-import { renderSingleAnalysis } from '../render/analysis.ts';
+import { renderSingleAnalysis, renderAnalysisPlaceholder } from '../render/analysis.ts';
 import { renderReaderView } from '../render/reader.ts';
 import { renderHistoryPanel } from '../render/history.ts';
 import { showError } from '../render/common.ts';
@@ -85,7 +84,7 @@ function setupProcessButtonListener() {
         const currentEntry = state.findTextEntryById(state.currentTextEntryId!)!;
         renderReaderView(currentEntry);
         dom.inputArea.classList.add('hidden');
-        dom.analysisView.innerHTML = `<p class="text-center p-8 text-neutral-500">Select a sentence to analyze, or start reading mode.</p>`;
+        dom.analysisView.innerHTML = `<p class="text-center p-8 text-text-muted">Select a sentence to analyze, or start reading mode.</p>`;
     });
 }
 
@@ -93,6 +92,25 @@ function setupMainViewListeners() {
     dom.resultContainer.addEventListener('click', async (event) => {
         if (!dom.readingModeView.classList.contains('hidden')) return;
         const target = event.target as HTMLElement;
+
+        const reanalyzeBtn = target.closest('#re-analyze-button');
+        if (reanalyzeBtn) {
+            const sentenceEl = dom.readerView.querySelector<HTMLElement>('.clickable-sentence.selected');
+            const sentence = sentenceEl?.dataset.sentence;
+
+            if (!sentence || !state.currentTextEntryId) return;
+
+            // Remove the analysis from the cache to force a re-fetch.
+            const currentEntry = state.findTextEntryById(state.currentTextEntryId)!;
+            if (currentEntry.analyzedSentences[sentence]) {
+                delete currentEntry.analyzedSentences[sentence][state.analysisDepth];
+            }
+
+            // Simulate a click on the sentence to trigger the analysis flow,
+            // which now includes the placeholder and smooth transition.
+            sentenceEl.click();
+            return;
+        }
 
         const toggleTranslationBtn = target.closest('#toggle-translation-button');
         if (toggleTranslationBtn) {
@@ -121,9 +139,20 @@ function setupMainViewListeners() {
             const sentence = sentenceEl.dataset.sentence;
             if (!sentence || !state.currentTextEntryId) return;
 
+            // Update reading progress to match the clicked sentence
+            const currentEntryForProgress = state.findTextEntryById(state.currentTextEntryId);
+            if (currentEntryForProgress) {
+                const allSentences = currentEntryForProgress.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+                const sentenceIndex = allSentences.indexOf(sentence);
+                if (sentenceIndex !== -1) {
+                    state.updateReadingProgress(currentEntryForProgress.id, sentenceIndex);
+                    saveHistory(); // Persist the progress update
+                }
+            }
+
             hideTooltip();
-            dom.readerView.querySelectorAll('.clickable-sentence').forEach(el => el.classList.remove('selected', 'bg-sky-200/60', 'dark:bg-sky-500/30', 'font-semibold'));
-            sentenceEl.classList.add('selected', 'bg-sky-200/60', 'dark:bg-sky-500/30', 'font-semibold');
+            dom.readerView.querySelectorAll('.clickable-sentence').forEach(el => el.classList.remove('selected', 'bg-accent-selected-bg/60', 'dark:bg-accent-selected-bg/30', 'font-semibold'));
+            sentenceEl.classList.add('selected', 'bg-accent-selected-bg/60', 'dark:bg-accent-selected-bg/30', 'font-semibold');
             
             const currentEntry = state.findTextEntryById(state.currentTextEntryId)!;
             const analysis = currentEntry.analyzedSentences[sentence]?.[state.analysisDepth];
@@ -133,14 +162,27 @@ function setupMainViewListeners() {
                 setupJumpButtonAndObserver();
                 dom.analysisView.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
-                dom.analysisView.innerHTML = `<p class="text-center p-8 text-neutral-500">Analyzing sentence...</p>`;
+                renderAnalysisPlaceholder(dom.analysisView, sentence);
+                dom.analysisView.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 try {
                     const result = await performAndCacheAnalysis(currentEntry, sentence, state.analysisDepth);
-                    renderReaderView(currentEntry); 
-                    dom.readerView.querySelector<HTMLElement>(`.clickable-sentence[data-sentence="${CSS.escape(sentence)}"]`)?.classList.add('selected', 'bg-sky-200/60', 'dark:bg-sky-500/30', 'font-semibold');
+                    
+                    const container = dom.analysisView;
+                    container.style.transition = 'opacity 0.2s ease-in-out';
+                    container.style.opacity = '0';
+                    
+                    await new Promise(resolve => setTimeout(resolve, 200));
+
                     renderSingleAnalysis(dom.analysisView, result);
                     setupJumpButtonAndObserver();
-                    dom.analysisView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    renderReaderView(currentEntry); 
+                    dom.readerView.querySelector<HTMLElement>(`.clickable-sentence[data-sentence="${CSS.escape(sentence)}"]`)?.classList.add('selected', 'bg-accent-selected-bg/60', 'dark:bg-accent-selected-bg/30', 'font-semibold');
+                    
+                    container.style.opacity = '1';
+                    
+                    setTimeout(() => { container.style.transition = ''; }, 250);
+
                 } catch(e) {
                     const error = e instanceof Error ? e : new Error(String(e));
                     const { main, detail } = formatApiError(error);
@@ -166,6 +208,26 @@ function setupReadingModeListeners() {
     dom.resultContainer.addEventListener('click', (event) => {
         if (dom.readingModeView.classList.contains('hidden')) return;
         const target = event.target as HTMLElement;
+
+        const reanalyzeBtn = target.closest('#re-analyze-button');
+        if (reanalyzeBtn) {
+            if (!state.currentTextEntryId) return;
+            const entry = state.findTextEntryById(state.currentTextEntryId);
+            if (!entry) return;
+
+            // Force re-analysis by deleting cache and re-running startReadingMode
+            const sentenceIndex = entry.readingProgress;
+            const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+            const sentence = sentences[sentenceIndex];
+            
+            if (entry.analyzedSentences[sentence]) {
+                delete entry.analyzedSentences[sentence][state.analysisDepth];
+            }
+            saveHistory(); // persist cache deletion
+
+            startReadingMode(entry, sentenceIndex);
+            return;
+        }
 
         const toggleTranslationBtn = target.closest('#toggle-translation-button');
         if (toggleTranslationBtn) {
@@ -228,11 +290,11 @@ function setupPatternFocusHandler() {
 
         const isAlreadyFocused = noteItem.classList.contains('is-focused');
 
-        currentAnalysisView.querySelectorAll('[data-pattern-id]').forEach(item => item.classList.remove('is-focused', 'ring-2', 'ring-sky-500', 'bg-white', 'dark:bg-neutral-800'));
+        currentAnalysisView.querySelectorAll('[data-pattern-id]').forEach(item => item.classList.remove('is-focused', 'ring-2', 'ring-focus-ring', 'bg-surface-soft'));
         currentAnalysisView.querySelectorAll('.segment').forEach(segment => segment.classList.remove('opacity-30'));
         
         if (!isAlreadyFocused) {
-            noteItem.classList.add('is-focused', 'ring-2', 'ring-sky-500', 'bg-white', 'dark:bg-neutral-800');
+            noteItem.classList.add('is-focused', 'ring-2', 'ring-focus-ring', 'bg-surface-soft');
             const segmentsToDim = currentAnalysisView.querySelectorAll(`.segment:not(.${patternId})`);
             segmentsToDim.forEach(segment => segment.classList.add('opacity-30'));
         }
@@ -273,7 +335,7 @@ function setupExampleSentenceHandler() {
 
             if (examples?.length > 0) {
                 const newExamplesContainer = document.createElement('div');
-                newExamplesContainer.className = 'examples-container mt-4 pt-4 border-t border-dashed border-neutral-200 dark:border-neutral-700';
+                newExamplesContainer.className = 'examples-container mt-4 pt-4 border-t border-dashed border-border-subtle';
                 const list = document.createElement('dl');
                 list.className = 'flex flex-col gap-4';
                 examples.forEach((ex: any) => {
@@ -281,7 +343,7 @@ function setupExampleSentenceHandler() {
                     const dd = document.createElement('dd');
                     const furiganaHtml = createFuriganaHTML(ex.japanese, ex.reading, false);
                     dt.innerHTML = `<span class="text-lg font-jp">${furiganaHtml}</span>`;
-                    dd.className = 'text-sm text-neutral-600 dark:text-neutral-400 -mt-1';
+                    dd.className = 'text-sm text-text-muted -mt-1';
                     dd.textContent = ex.english;
                     list.append(dt, dd);
                 });
@@ -366,6 +428,12 @@ function setupHotkeys() {
             if (toggleBtn) {
                 event.preventDefault();
                 toggleBtn.click();
+                
+                // After toggling, if the content is now visible, scroll to it.
+                const translationContent = toggleBtn.closest('.p-4.rounded-lg')?.querySelector<HTMLElement>('#translation-content');
+                if (translationContent && !translationContent.classList.contains('hidden')) {
+                    translationContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
         }
 
@@ -380,7 +448,7 @@ function setupHotkeys() {
         const focusedPattern = visibleAnalysisContainer.querySelector<HTMLElement>('.is-focused');
         if (event.key === 'Escape' && focusedPattern) {
             event.preventDefault();
-            focusedPattern.classList.remove('is-focused', 'ring-2', 'ring-sky-500', 'bg-white', 'dark:bg-neutral-800');
+            focusedPattern.classList.remove('is-focused', 'ring-2', 'ring-focus-ring', 'bg-surface-soft');
             visibleAnalysisContainer.querySelectorAll('.segment').forEach(segment => segment.classList.remove('opacity-30'));
         }
 
