@@ -3,12 +3,15 @@
 import * as dom from '../dom.ts';
 import * as state from '../state.ts';
 import { showError } from './render/common.ts';
+import { hideTooltip } from './tooltip.ts';
 
 /** Updates visibility of furigana and pitch accent based on checkbox states. */
 export function applyDisplayOptions() {
     const isFuriganaHidden = !dom.furiganaCheckbox.checked;
     const isPitchAccentHidden = !dom.pitchAccentCheckbox.checked;
+    const isColorCodingHidden = !dom.colorCodingCheckbox.checked;
 
+    dom.resultContainer.classList.toggle('color-coding-disabled', isColorCodingHidden);
     document.querySelectorAll('#result-container rt').forEach(el => el.classList.toggle('hidden', isFuriganaHidden));
     document.querySelectorAll('#result-container .pitch-accent-svg').forEach(el => el.classList.toggle('hidden', isPitchAccentHidden));
     
@@ -78,4 +81,18 @@ export function formatApiError(error: Error): { main: string, detail?: string } 
     return {
         main: message,
     };
+}
+
+/** Clears the main view and resets state to the default new text view. */
+export function resetToNewTextView() {
+    dom.textTitleInput.value = '';
+    dom.sentenceInput.value = '';
+    switchToMainView();
+    dom.inputArea.classList.remove('hidden');
+    dom.readerView.innerHTML = '';
+    dom.analysisView.innerHTML = '';
+    
+    state.setCurrentTextEntryId(null);
+    hideTooltip();
+    updateProcessButtonState();
 }

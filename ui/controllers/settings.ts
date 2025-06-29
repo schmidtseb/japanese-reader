@@ -4,32 +4,96 @@ import * as dom from '../../dom.ts';
 import * as state from '../../state.ts';
 import { renderSingleAnalysis } from '../render/analysis.ts';
 import { renderReaderView } from '../render/reader.ts';
+import { renderHistoryPanel } from '../render/history.ts';
 import { showAlertModal, showConfirmationModal } from '../modal.ts';
-import { applyDisplayOptions, formatApiError, updateProcessButtonState } from '../view.ts';
+import { applyDisplayOptions, formatApiError, updateProcessButtonState, resetToNewTextView } from '../view.ts';
 import { performAndCacheAnalysis, startReadingMode } from '../actions.ts';
 import { showError } from '../render/common.ts';
 import {
     API_KEY_KEY,
     THEME_KEY,
     FURIGANA_HIDDEN_KEY,
+    COLOR_CODING_HIDDEN_KEY,
     PITCH_ACCENT_HIDDEN_KEY,
     ANALYSIS_DEPTH_KEY,
     FONT_SIZE_KEY,
 } from '../handlers.ts';
 import { saveHistory } from './history.ts';
 
+const FONT_SIZE_STEPS = [
+    { label: 'XX-Small', value: '0.75' },
+    { label: 'X-Small', value: '0.85' },
+    { label: 'Small', value: '1.0' },
+    { label: 'Medium', value: '1.15' },
+    { label: 'Large', value: '1.3' },
+    { label: 'X-Large', value: '1.5' },
+];
+const DEFAULT_FONT_SIZE_INDEX = 2; // Default to 'Small' (1.0)
+
+
+/**
+ * Reads all settings from localStorage and applies them to the DOM and state.
+ * This function does not set up event listeners.
+ */
+function applyAllSettings() {
+    // Theme
+    const currentTheme = localStorage.getItem(THEME_KEY) || 'light';
+    document.documentElement.classList.toggle('dark', currentTheme === 'dark');
+    dom.themeCheckbox.checked = (currentTheme === 'dark');
+    
+    // Display Toggles
+    const furiganaHidden = localStorage.getItem(FURIGANA_HIDDEN_KEY) === 'true';
+    dom.furiganaCheckbox.checked = !furiganaHidden;
+
+    const colorCodingHidden = localStorage.getItem(COLOR_CODING_HIDDEN_KEY) !== 'false'; // Default to true (on)
+    dom.colorCodingCheckbox.checked = !colorCodingHidden;
+
+    const pitchAccentHidden = localStorage.getItem(PITCH_ACCENT_HIDDEN_KEY) !== 'false';
+    dom.pitchAccentCheckbox.checked = !pitchAccentHidden;
+    applyDisplayOptions();
+    
+    // Analysis Depth
+    const savedDepth = localStorage.getItem(ANALYSIS_DEPTH_KEY) as state.AnalysisDepth | null;
+    const newDepth = savedDepth && state.depthLevels.includes(savedDepth) ? savedDepth : 'medium';
+    state.setAnalysisDepth(newDepth);
+    const newIndex = state.depthLevels.indexOf(newDepth);
+    dom.analysisDepthSlider.value = String(newIndex);
+    dom.analysisDepthLabel.textContent = newDepth.charAt(0).toUpperCase() + newDepth.slice(1);
+    
+    // Font Size
+    const sizeSteps = FONT_SIZE_STEPS;
+    const savedSizeIndexStr = localStorage.getItem(FONT_SIZE_KEY);
+    const savedSizeIndex = savedSizeIndexStr ? parseInt(savedSizeIndexStr, 10) : DEFAULT_FONT_SIZE_INDEX;
+    const sizeIndex = (savedSizeIndex >= 0 && savedSizeIndex < sizeSteps.length) ? savedSizeIndex : DEFAULT_FONT_SIZE_INDEX;
+    if (sizeIndex >= 0 && sizeIndex < sizeSteps.length) {
+        const step = sizeSteps[sizeIndex];
+        document.documentElement.style.setProperty('--font-size-multiplier', step.value);
+        dom.fontSizeSlider.value = String(sizeIndex);
+        dom.fontSizeLabel.textContent = step.label;
+    }
+
+    // API Key
+    const storedKey = localStorage.getItem(API_KEY_KEY);
+    const effectiveKey = storedKey || process.env.API_KEY || null;
+    state.setApiKey(effectiveKey);
+    dom.apiKeyInput.value = ''; // Clear the input field
+    if (storedKey) {
+        dom.apiKeyInput.placeholder = 'API key saved';
+        dom.apiKeyStatus.textContent = 'Using key from local storage.';
+        dom.apiKeyStatus.classList.remove('text-amber-500', 'font-semibold');
+    } else if (process.env.API_KEY) {
+        dom.apiKeyStatus.textContent = 'Using built-in API key.';
+        dom.apiKeyStatus.classList.remove('text-amber-500', 'font-semibold');
+    } else {
+        dom.apiKeyStatus.textContent = 'No API key found. Please add one.';
+        dom.apiKeyStatus.classList.add('text-amber-500', 'font-semibold');
+    }
+    updateProcessButtonState();
+}
+
 
 /** Manages the theme switching functionality. */
 function setupThemeSwitcher() {
-  const currentTheme = localStorage.getItem(THEME_KEY) || 'light';
-  if (currentTheme === 'dark') {
-    document.documentElement.classList.add('dark');
-    dom.themeCheckbox.checked = true;
-  } else {
-    document.documentElement.classList.remove('dark');
-    dom.themeCheckbox.checked = false;
-  }
-
   dom.themeCheckbox.addEventListener('change', () => {
     const newTheme = dom.themeCheckbox.checked ? 'dark' : 'light';
     document.documentElement.classList.toggle('dark', dom.themeCheckbox.checked);
@@ -50,18 +114,18 @@ function setupThemeSwitcher() {
 
 /** Manages visibility toggles for optional visualizations. */
 function setupDisplayToggles() {
-    // Furigana
-    const furiganaHidden = localStorage.getItem(FURIGANA_HIDDEN_KEY) === 'true';
-    dom.furiganaCheckbox.checked = !furiganaHidden;
     dom.furiganaCheckbox.addEventListener('change', () => {
         const isHidden = !dom.furiganaCheckbox.checked;
         localStorage.setItem(FURIGANA_HIDDEN_KEY, String(isHidden));
         applyDisplayOptions();
     });
 
-    // Pitch Accent
-    const pitchAccentHidden = localStorage.getItem(PITCH_ACCENT_HIDDEN_KEY) !== 'false';
-    dom.pitchAccentCheckbox.checked = !pitchAccentHidden;
+    dom.colorCodingCheckbox.addEventListener('change', () => {
+        const isHidden = !dom.colorCodingCheckbox.checked;
+        localStorage.setItem(COLOR_CODING_HIDDEN_KEY, String(isHidden));
+        applyDisplayOptions();
+    });
+
     dom.pitchAccentCheckbox.addEventListener('change', () => {
         const isHidden = !dom.pitchAccentCheckbox.checked;
         localStorage.setItem(PITCH_ACCENT_HIDDEN_KEY, String(isHidden));
@@ -71,14 +135,6 @@ function setupDisplayToggles() {
 
 /** Manages the analysis depth slider. */
 function setupAnalysisDepthSlider() {
-    const savedDepth = localStorage.getItem(ANALYSIS_DEPTH_KEY) as state.AnalysisDepth | null;
-    const initialDepth = savedDepth && state.depthLevels.includes(savedDepth) ? savedDepth : 'medium';
-    state.setAnalysisDepth(initialDepth);
-    
-    const initialIndex = state.depthLevels.indexOf(initialDepth);
-    dom.analysisDepthSlider.value = String(initialIndex);
-    dom.analysisDepthLabel.textContent = initialDepth.charAt(0).toUpperCase() + initialDepth.slice(1);
-
     dom.analysisDepthSlider.addEventListener('input', () => {
         const newDepth = state.depthLevels[parseInt(dom.analysisDepthSlider.value, 10)];
         dom.analysisDepthLabel.textContent = newDepth.charAt(0).toUpperCase() + newDepth.slice(1);
@@ -118,52 +174,20 @@ function setupAnalysisDepthSlider() {
 
 /** Manages the font size slider. */
 function setupFontSizeSlider() {
-    const sizeSteps = [
-        { label: 'Small', value: '0.85' },
-        { label: 'Normal', value: '1.0' },
-        { label: 'Medium', value: '1.15' },
-        { label: 'Large', value: '1.3' },
-        { label: 'X-Large', value: '1.5' },
-    ];
+    const sizeSteps = FONT_SIZE_STEPS;
     
-    const savedSizeIndexStr = localStorage.getItem(FONT_SIZE_KEY);
-    // Default to 'Normal' (index 1) if nothing is saved
-    const savedSizeIndex = savedSizeIndexStr ? parseInt(savedSizeIndexStr, 10) : 1;
-    const initialIndex = (savedSizeIndex >= 0 && savedSizeIndex < sizeSteps.length) ? savedSizeIndex : 1;
-
-    function applyFontSize(index: number) {
-        if (index < 0 || index >= sizeSteps.length) return;
-        const step = sizeSteps[index];
-        document.documentElement.style.setProperty('--font-size-multiplier', step.value);
-        dom.fontSizeSlider.value = String(index);
-        dom.fontSizeLabel.textContent = step.label;
-        localStorage.setItem(FONT_SIZE_KEY, String(index));
-    }
-
-    applyFontSize(initialIndex);
-
     dom.fontSizeSlider.addEventListener('input', () => {
         const newIndex = parseInt(dom.fontSizeSlider.value, 10);
-        applyFontSize(newIndex);
+        if (newIndex >= 0 && newIndex < sizeSteps.length) {
+            const step = sizeSteps[newIndex];
+            document.documentElement.style.setProperty('--font-size-multiplier', step.value);
+            dom.fontSizeLabel.textContent = step.label;
+            localStorage.setItem(FONT_SIZE_KEY, String(newIndex));
+        }
     });
 }
 
 function setupApiKeyManager() {
-    const storedKey = localStorage.getItem(API_KEY_KEY);
-    const effectiveKey = storedKey || process.env.API_KEY || null;
-
-    state.setApiKey(effectiveKey);
-
-    if (storedKey) {
-        dom.apiKeyInput.placeholder = 'API key saved';
-        dom.apiKeyStatus.textContent = 'Using key from local storage.';
-    } else if (process.env.API_KEY) {
-        dom.apiKeyStatus.textContent = 'Using built-in API key.';
-    } else {
-        dom.apiKeyStatus.textContent = 'No API key found. Please add one.';
-        dom.apiKeyStatus.classList.add('text-amber-500', 'font-semibold');
-    }
-
     dom.saveApiKeyButton.addEventListener('click', () => {
         const newKey = dom.apiKeyInput.value.trim();
         if (newKey) {
@@ -180,7 +204,6 @@ function setupApiKeyManager() {
         }
         updateProcessButtonState();
     });
-    updateProcessButtonState();
 }
 
 function setupDataManagement() {
@@ -192,6 +215,7 @@ function setupDataManagement() {
             settings: {
                 [THEME_KEY]: localStorage.getItem(THEME_KEY),
                 [FURIGANA_HIDDEN_KEY]: localStorage.getItem(FURIGANA_HIDDEN_KEY),
+                [COLOR_CODING_HIDDEN_KEY]: localStorage.getItem(COLOR_CODING_HIDDEN_KEY),
                 [PITCH_ACCENT_HIDDEN_KEY]: localStorage.getItem(PITCH_ACCENT_HIDDEN_KEY),
                 [ANALYSIS_DEPTH_KEY]: localStorage.getItem(ANALYSIS_DEPTH_KEY)
             }
@@ -222,9 +246,7 @@ function setupDataManagement() {
                 showConfirmationModal(
                     "Importing will overwrite your current history and settings. Are you sure you want to continue?",
                     () => {
-                        state.setTextHistory(data.history);
-                        saveHistory();
-
+                        // 1. Update localStorage with new settings from imported data.
                         Object.keys(data.settings).forEach(key => {
                             const value = data.settings[key];
                             if (value !== null && value !== undefined) {
@@ -233,10 +255,20 @@ function setupDataManagement() {
                                 localStorage.removeItem(key);
                             }
                         });
+
+                        // 2. Update history state and persist.
+                        state.setTextHistory(data.history);
+                        saveHistory();
+
+                        // 3. Apply all new settings to the current view.
+                        applyAllSettings();
                         
-                        showAlertModal("Import successful! The application will now reload to apply the new settings.", () => {
-                            window.location.reload();
-                        });
+                        // 4. Update UI components.
+                        renderHistoryPanel();
+                        resetToNewTextView();
+                        
+                        // 5. Inform user.
+                        showAlertModal("Import successful! Your data and settings have been updated.");
                     },
                     { confirmText: "Import", confirmClass: "bg-sky-600 hover:bg-sky-700" }
                 );
@@ -267,11 +299,12 @@ function setupSettingsMenu() {
 }
 
 export function initializeSettings() {
-    setupApiKeyManager();
+    applyAllSettings();
     setupSettingsMenu();
     setupThemeSwitcher();
     setupDisplayToggles();
     setupAnalysisDepthSlider();
     setupFontSizeSlider();
+    setupApiKeyManager();
     setupDataManagement();
 }

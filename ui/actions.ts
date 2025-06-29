@@ -5,7 +5,7 @@ import { analyzeSentence } from '../services/gemini.ts';
 import { renderSingleAnalysis } from './render/analysis.ts';
 import { renderReaderView, renderReadingModeView, renderReadingModeLoading } from './render/reader.ts';
 import { renderHistoryPanel } from './render/history.ts';
-import { applyDisplayOptions, updateProcessButtonState, switchToMainView, switchToReadingMode, formatApiError } from './view.ts';
+import { applyDisplayOptions, updateProcessButtonState, switchToMainView, switchToReadingMode, formatApiError, resetToNewTextView } from './view.ts';
 import { showError } from './render/common.ts';
 import { hideTooltip } from './tooltip.ts';
 import { ensureJumpButtonExists } from './jumpButton.ts';
@@ -119,19 +119,5 @@ export function loadTextEntry(id: string) {
 
     renderReaderView(entry);
     dom.analysisView.innerHTML = `<p class="text-center p-8 text-slate-500">Select a sentence to analyze, or start reading mode.</p>`;
-    updateProcessButtonState();
-}
-
-/** Clears the main view and resets state to the default new text view. */
-export function resetToNewTextView() {
-    dom.textTitleInput.value = '';
-    dom.sentenceInput.value = '';
-    switchToMainView();
-    dom.inputArea.classList.remove('hidden');
-    dom.readerView.innerHTML = '';
-    dom.analysisView.innerHTML = '';
-    
-    state.setCurrentTextEntryId(null);
-    hideTooltip();
     updateProcessButtonState();
 }

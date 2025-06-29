@@ -113,11 +113,11 @@ export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: num
     // 1. Navigation Header - FIXED
     const navHeader = document.createElement('header');
     // Use a backdrop blur for a modern, sleek look. The background is slightly transparent.
-    navHeader.className = 'fixed top-0 left-0 right-0 z-20 border-b border-neutral-200/50 dark:border-neutral-700/50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm transition-colors duration-300';
+    navHeader.className = 'fixed top-0 left-0 right-0 z-20 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 duration-300';
 
     const navHeaderContent = document.createElement('div');
     // The inner div constrains the content to match the main app layout
-    navHeaderContent.className = 'max-w-4xl mx-auto flex items-center justify-between p-4';
+    navHeaderContent.className = 'max-w-4xl mx-auto flex items-center justify-between p-2';
     navHeaderContent.innerHTML = `
         <button id="reading-mode-exit" title="Exit Reading Mode" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-neutral-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -129,10 +129,10 @@ export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: num
             <span>/ ${totalSentences}</span>
         </div>
         <div class="flex items-center gap-2">
-            <button id="reading-nav-prev" title="Previous Sentence" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" ${sentenceIndex === 0 ? 'disabled' : ''}>
+            <button id="reading-nav-prev" title="Previous Sentence (←)" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" ${sentenceIndex === 0 ? 'disabled' : ''}>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <button id="reading-nav-next" title="Next Sentence" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" ${sentenceIndex >= totalSentences - 1 ? 'disabled' : ''}>
+            <button id="reading-nav-next" title="Next Sentence (→)" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" ${sentenceIndex >= totalSentences - 1 ? 'disabled' : ''}>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
             </button>
         </div>
@@ -142,12 +142,9 @@ export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: num
 
     // 2. Analysis Container
     const analysisContainer = document.createElement('div');
-    // Add padding to the top of the content area to prevent it from being hidden by the fixed header.
-    // The value should match the header's height. 4.5625rem (73px) seems a safe value used before.
-    analysisContainer.style.paddingTop = '4.5625rem'; 
 
     // The sticky header inside analysis will now stick below the fixed header.
-    renderSingleAnalysis(analysisContainer, analysisData, { stickyTopClass: 'top-[4.5625rem]' });
+    renderSingleAnalysis(analysisContainer, analysisData, { stickyTopClass: 'top-14' });
     dom.readingModeView.appendChild(analysisContainer);
 }
 
@@ -173,10 +170,10 @@ export function renderReadingModeLoading(sentenceIndex: number, totalSentences: 
             <span>/ ${totalSentences}</span>
         </div>
         <div class="flex items-center gap-2">
-            <button id="reading-nav-prev" title="Previous Sentence" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+            <button id="reading-nav-prev" title="Previous Sentence (←)" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <button id="reading-nav-next" title="Next Sentence" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+            <button id="reading-nav-next" title="Next Sentence (→)" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
             </button>
         </div>

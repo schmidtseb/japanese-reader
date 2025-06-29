@@ -2,7 +2,8 @@
 import * as dom from '../../dom.ts';
 import * as state from '../../state.ts';
 import { showConfirmationModal } from '../modal.ts';
-import { loadTextEntry, resetToNewTextView } from '../actions.ts';
+import { loadTextEntry } from '../actions.ts';
+import { resetToNewTextView } from '../view.ts';
 import { renderHistoryPanel } from '../render/history.ts';
 import { HISTORY_KEY } from '../handlers.ts';
 

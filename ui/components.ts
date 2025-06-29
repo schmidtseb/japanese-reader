@@ -4,14 +4,14 @@
 export function getCategoryClass(category: string): string {
   const cat = (category || 'unknown').split(/[-_]/)[0].toLowerCase();
   const classMap: { [key: string]: string } = {
-    noun: 'bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200',
-    verb: 'bg-green-100 dark:bg-green-900/60 text-green-800 dark:text-green-200',
-    particle: 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200',
-    adjective: 'bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200',
-    adverb: 'bg-yellow-100 dark:bg-yellow-900/60 text-yellow-800 dark:text-yellow-200',
+    noun: 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200',
+    verb: 'bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200',
+    particle: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+    adjective: 'bg-violet-100 dark:bg-violet-900/60 text-violet-800 dark:text-violet-200',
+    adverb: 'bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200',
     auxiliary: 'bg-cyan-100 dark:bg-cyan-900/60 text-cyan-800 dark:text-cyan-200',
     grammatical: 'bg-cyan-100 dark:bg-cyan-900/60 text-cyan-800 dark:text-cyan-200',
-    conjunction: 'bg-pink-100 dark:bg-pink-900/60 text-pink-800 dark:text-pink-200',
+    conjunction: 'bg-fuchsia-100 dark:bg-fuchsia-900/60 text-fuchsia-800 dark:text-fuchsia-200',
     punctuation: 'bg-transparent',
     unknown: 'bg-neutral-100 dark:bg-neutral-700'
   };

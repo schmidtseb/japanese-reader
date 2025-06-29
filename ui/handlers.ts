@@ -16,6 +16,7 @@ export const ANALYSIS_DEPTH_KEY = 'japanese-analyzer-analysis-depth';
 export const API_KEY_KEY = 'japanese-analyzer-api-key';
 export const THEME_KEY = 'theme';
 export const FURIGANA_HIDDEN_KEY = 'furigana-hidden';
+export const COLOR_CODING_HIDDEN_KEY = 'color-coding-hidden';
 export const PITCH_ACCENT_HIDDEN_KEY = 'pitch-accent-hidden';
 export const FONT_SIZE_KEY = 'japanese-analyzer-font-size';
 

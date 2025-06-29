@@ -1,3 +1,4 @@
+
 // ui/controllers/main.ts
 import * as dom from '../../dom.ts';
 import * as state from '../../state.ts';
@@ -9,11 +10,26 @@ import { renderSingleAnalysis } from '../render/analysis.ts';
 import { renderReaderView } from '../render/reader.ts';
 import { renderHistoryPanel } from '../render/history.ts';
 import { showError } from '../render/common.ts';
-import { applyDisplayOptions, formatApiError, updateProcessButtonState } from '../view.ts';
-import { performAndCacheAnalysis, startReadingMode, loadTextEntry, resetToNewTextView } from '../actions.ts';
+import { applyDisplayOptions, formatApiError, updateProcessButtonState, resetToNewTextView } from '../view.ts';
+import { performAndCacheAnalysis, startReadingMode, loadTextEntry } from '../actions.ts';
 import { UNSAVED_TITLE_KEY, UNSAVED_TEXT_KEY } from '../handlers.ts';
 import { saveHistory } from './history.ts';
 
+
+/** Toggles the visibility of the translation content and updates the button state. */
+function toggleTranslationVisibility(button: HTMLButtonElement) {
+    const content = button.closest('.p-4.rounded-lg')?.querySelector<HTMLElement>('#translation-content');
+    if (!content) return;
+
+    const isHidden = content.classList.contains('hidden');
+    content.classList.toggle('hidden');
+    button.setAttribute('aria-expanded', String(!isHidden));
+
+    const buttonText = button.querySelector<HTMLSpanElement>('.button-text');
+    if (buttonText) {
+        buttonText.textContent = isHidden ? 'Hide' : 'Show';
+    }
+}
 
 function setupProcessButtonListener() {
     dom.button.addEventListener('click', async () => {
@@ -78,6 +94,12 @@ function setupMainViewListeners() {
         if (!dom.readingModeView.classList.contains('hidden')) return;
         const target = event.target as HTMLElement;
 
+        const toggleTranslationBtn = target.closest('#toggle-translation-button');
+        if (toggleTranslationBtn) {
+            toggleTranslationVisibility(toggleTranslationBtn as HTMLButtonElement);
+            return;
+        }
+
         if (target.closest('#start-reading-button')) {
             if (state.currentTextEntryId) {
                 const entry = state.findTextEntryById(state.currentTextEntryId);
@@ -109,6 +131,7 @@ function setupMainViewListeners() {
             if (analysis) {
                 renderSingleAnalysis(dom.analysisView, analysis);
                 setupJumpButtonAndObserver();
+                dom.analysisView.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 dom.analysisView.innerHTML = `<p class="text-center p-8 text-neutral-500">Analyzing sentence...</p>`;
                 try {
@@ -117,10 +140,12 @@ function setupMainViewListeners() {
                     dom.readerView.querySelector<HTMLElement>(`.clickable-sentence[data-sentence="${CSS.escape(sentence)}"]`)?.classList.add('selected', 'bg-sky-200/60', 'dark:bg-sky-500/30', 'font-semibold');
                     renderSingleAnalysis(dom.analysisView, result);
                     setupJumpButtonAndObserver();
+                    dom.analysisView.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } catch(e) {
                     const error = e instanceof Error ? e : new Error(String(e));
                     const { main, detail } = formatApiError(error);
                     showError(main, 'analysis', detail);
+                    dom.analysisView.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
             applyDisplayOptions();
@@ -141,6 +166,13 @@ function setupReadingModeListeners() {
     dom.resultContainer.addEventListener('click', (event) => {
         if (dom.readingModeView.classList.contains('hidden')) return;
         const target = event.target as HTMLElement;
+
+        const toggleTranslationBtn = target.closest('#toggle-translation-button');
+        if (toggleTranslationBtn) {
+            toggleTranslationVisibility(toggleTranslationBtn as HTMLButtonElement);
+            return;
+        }
+        
         const entryId = state.currentTextEntryId;
         if (!entryId) return;
         const entry = state.findTextEntryById(entryId);
@@ -294,6 +326,116 @@ function setupTextPersistence() {
     });
 }
 
+function setupHotkeys() {
+    document.addEventListener('keydown', (event) => {
+        const target = event.target as HTMLElement;
+        // Ignore hotkeys if user is typing in an input field
+        if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) {
+            return;
+        }
+
+        // --- Global display toggles ---
+        if (event.key.toLowerCase() === 'f') {
+            event.preventDefault();
+            dom.furiganaCheckbox.click(); // This will trigger the change event
+        }
+        if (event.key.toLowerCase() === 'c') {
+            event.preventDefault();
+            dom.colorCodingCheckbox.click(); // This will trigger the change event
+        }
+
+        const isReadingMode = !dom.readingModeView.classList.contains('hidden');
+        const visibleAnalysisContainer = isReadingMode ? dom.readingModeView : (dom.analysisView.innerHTML.trim() ? dom.analysisView : null);
+
+        // --- Reading Mode Navigation ---
+        if (isReadingMode) {
+            if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                (document.getElementById('reading-nav-next') as HTMLButtonElement)?.click();
+            } else if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                (document.getElementById('reading-nav-prev') as HTMLButtonElement)?.click();
+            }
+        }
+
+        if (!visibleAnalysisContainer) return;
+
+        // --- Global Hotkeys (when analysis is visible) ---
+        if (event.key.toLowerCase() === 't') {
+            const toggleBtn = visibleAnalysisContainer.querySelector<HTMLButtonElement>('#toggle-translation-button');
+            if (toggleBtn) {
+                event.preventDefault();
+                toggleBtn.click();
+            }
+        }
+
+        if (event.key.toLowerCase() === 's') {
+             const ttsBtn = visibleAnalysisContainer.querySelector<HTMLButtonElement>('.tts-button');
+             if (ttsBtn) {
+                 event.preventDefault();
+                 ttsBtn.click();
+             }
+        }
+
+        const focusedPattern = visibleAnalysisContainer.querySelector<HTMLElement>('.is-focused');
+        if (event.key === 'Escape' && focusedPattern) {
+            event.preventDefault();
+            focusedPattern.classList.remove('is-focused', 'ring-2', 'ring-sky-500', 'bg-white', 'dark:bg-neutral-800');
+            visibleAnalysisContainer.querySelectorAll('.segment').forEach(segment => segment.classList.remove('opacity-30'));
+        }
+
+        // --- Pattern Navigation Hotkeys ---
+        const patternNotes = Array.from(visibleAnalysisContainer.querySelectorAll<HTMLElement>('[data-pattern-id]'));
+        if (patternNotes.length > 0) {
+             const focusedIndex = patternNotes.findIndex(note => note.classList.contains('is-focused'));
+
+             if (event.key.toLowerCase() === 'j' || event.key.toLowerCase() === 'k') {
+                 event.preventDefault();
+                 let nextIndex = (focusedIndex === -1) ? 0 : (event.key === 'j' ? focusedIndex + 1 : focusedIndex - 1);
+                 if (nextIndex >= patternNotes.length) nextIndex = 0;
+                 if (nextIndex < 0) nextIndex = patternNotes.length - 1;
+                 
+                 const targetNote = patternNotes[nextIndex];
+                 if (!targetNote) return;
+
+                 targetNote.click();
+                 
+                 // Custom scroll logic to account for the sticky header
+                 const stickyHeader = visibleAnalysisContainer.querySelector<HTMLElement>('.sticky');
+                 const headerBottom = stickyHeader ? stickyHeader.getBoundingClientRect().bottom : 0;
+                 const targetRect = targetNote.getBoundingClientRect();
+                 const viewportHeight = window.innerHeight;
+
+                 const visibleHeight = viewportHeight - headerBottom;
+                 let idealTopInViewport: number;
+                 const PADDING = 20; // px
+
+                 // If element is taller than the visible area, just align its top.
+                 if (targetRect.height > visibleHeight) {
+                    idealTopInViewport = headerBottom + PADDING;
+                 } else {
+                    // Otherwise, center it in the available space.
+                    idealTopInViewport = headerBottom + (visibleHeight / 2) - (targetRect.height / 2);
+                 }
+
+                 const scrollOffset = targetRect.top - idealTopInViewport;
+                 
+                 window.scrollBy({
+                     top: scrollOffset,
+                     left: 0,
+                     behavior: 'smooth'
+                 });
+             }
+
+             if (event.key.toLowerCase() === 'e' && focusedPattern) {
+                 event.preventDefault();
+                 const examplesBtn = focusedPattern.querySelector<HTMLButtonElement>('.show-examples-button');
+                 examplesBtn?.click();
+             }
+        }
+    });
+}
+
 export function initializeMainController() {
     setupTextPersistence();
     setupProcessButtonListener();
@@ -302,4 +444,5 @@ export function initializeMainController() {
     setupPatternFocusHandler();
     setupExampleSentenceHandler();
     setupNewTextButton();
+    setupHotkeys();
 }
