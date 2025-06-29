@@ -5,25 +5,350 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Japanese Sentence Analyzer</title>
+  <style>
+    /* 
+        Improved Reader Color Theme using CSS Variables.
+        - Optimized for reading comfort with reduced eye strain
+        - Light theme: warm, soft tones for extended reading sessions
+        - Dark theme: high contrast with deep backgrounds and bright text
+        - Part-of-speech colors: vibrant yet muted to avoid distraction
+      */
+    :root {
+      /* Base Palette - Warmer, softer tones for better reading comfort */
+      --color-background-rgb: 252 252 250;
+      /* warm off-white */
+      --color-surface-rgb: 255 255 255;
+      /* pure white */
+      --color-surface-soft-rgb: 249 248 246;
+      /* warm gray-50 */
+      --color-surface-subtle-rgb: 245 244 241;
+      /* warm gray-100 */
+      --color-surface-hover-rgb: 241 240 236;
+      /* warm gray-150 */
+      --color-border-rgb: 232 229 224;
+      /* warm gray-200 */
+      --color-border-strong-rgb: 168 162 152;
+      /* warm gray-400 */
+      --color-border-subtle-rgb: 237 234 229;
+      /* subtle warm border */
+  
+      /* Text Palette - Higher contrast for better readability */
+      --color-text-primary-rgb: 28 25 23;
+      /* warm black */
+      --color-text-secondary-rgb: 68 64 60;
+      /* warm gray-700 */
+      --color-text-muted-rgb: 120 113 108;
+      /* warm gray-500 */
+      --color-text-inverted-rgb: 250 250 249;
+      /* warm white */
+  
+      /* Primary (Softer Blue) - Less aggressive than indigo */
+      --color-primary-rgb: 59 130 246;
+      /* blue-500 */
+      --color-primary-focus-rgb: 37 99 235;
+      /* blue-600 */
+      --color-primary-text-rgb: 255 255 255;
+      /* white */
+      --color-primary-subtle-bg-rgb: 239 246 255;
+      /* blue-50 */
+      --color-primary-subtle-text-rgb: 30 64 175;
+      /* blue-800 */
+      --color-focus-ring-rgb: 96 165 250;
+      /* blue-400 */
+  
+      /* Accent (Teal) - Calming accent color */
+      --color-accent-rgb: 20 184 166;
+      /* teal-500 */
+      --color-accent-text-rgb: 15 118 110;
+      /* teal-700 */
+      --color-accent-subtle-bg-rgb: 240 253 250;
+      /* teal-50 */
+      --color-accent-selected-bg-rgb: 204 251 241;
+      /* teal-100 */
+  
+      /* Destructive (Softer Red) */
+      --color-destructive-rgb: 239 68 68;
+      /* red-500 */
+      --color-destructive-hover-rgb: 220 38 38;
+      /* red-600 */
+      --color-destructive-subtle-bg-rgb: 254 242 242;
+      /* red-50 */
+      --color-destructive-subtle-text-rgb: 153 27 27;
+      /* red-800 */
+  
+      /* Warning (Softer Amber) */
+      --color-warning-text-rgb: 217 119 6;
+      /* amber-600 */
+  
+      /* Part of Speech Colors - Vibrant but muted for reading comfort */
+      --color-pos-noun-bg-rgb: 240 249 255;
+      /* sky-50 */
+      --color-pos-noun-text-rgb: 12 74 110;
+      /* sky-900 */
+      --color-pos-verb-bg-rgb: 236 254 255;
+      /* cyan-50 */
+      --color-pos-verb-text-rgb: 22 78 99;
+      /* cyan-900 */
+      --color-pos-particle-bg-rgb: 248 250 252;
+      /* slate-50 */
+      --color-pos-particle-text-rgb: 71 85 105;
+      /* slate-600 */
+      --color-pos-adjective-bg-rgb: 250 245 255;
+      /* violet-50 */
+      --color-pos-adjective-text-rgb: 91 33 182;
+      /* violet-800 */
+      --color-pos-adverb-bg-rgb: 240 253 250;
+      /* teal-50 */
+      --color-pos-adverb-text-rgb: 17 94 89;
+      /* teal-800 */
+      --color-pos-auxiliary-bg-rgb: 255 251 235;
+      /* amber-50 */
+      --color-pos-auxiliary-text-rgb: 146 64 14;
+      /* amber-800 */
+      --color-pos-conjunction-bg-rgb: 253 244 255;
+      /* fuchsia-50 */
+      --color-pos-conjunction-text-rgb: 134 25 143;
+      /* fuchsia-800 */
+      --color-pos-suffix-bg-rgb: 245 245 244;
+      /* stone-100 */
+      --color-pos-suffix-text-rgb: 87 83 78;
+      /* stone-600 */
+  
+      /* Grammar Pattern Underline Colors - Softer but distinct */
+      --color-pattern-0-rgb: 59 130 246;
+      /* blue-500 */
+      --color-pattern-1-rgb: 34 197 94;
+      /* green-500 */
+      --color-pattern-2-rgb: 245 158 11;
+      /* amber-500 */
+      --color-pattern-3-rgb: 139 92 246;
+      /* violet-500 */
+      --color-pattern-4-rgb: 236 72 153;
+      /* pink-500 */
+      --color-pattern-5-rgb: 20 184 166;
+      /* teal-500 */
+      --color-pattern-6-rgb: 239 68 68;
+      /* red-500 */
+      --color-pattern-7-rgb: 99 102 241;
+      /* indigo-500 */
+      --color-pattern-8-rgb: 6 182 212;
+      /* cyan-500 */
+      --color-pattern-9-rgb: 217 70 239;
+      /* fuchsia-500 */
+      --color-pattern-10-rgb: 249 115 22;
+      /* orange-500 */
+      --color-pattern-11-rgb: 107 114 128;
+      /* gray-500 */
+    }
+  
+    .dark {
+      /* Base Palette - Deep, high-contrast dark theme */
+      --color-background-rgb: 9 9 11;
+      /* zinc-950 - deeper black */
+      --color-surface-rgb: 24 24 27;
+      /* zinc-900 */
+      --color-surface-soft-rgb: 14 14 16;
+      /* zinc-800 */
+      --color-surface-subtle-rgb: 19 19 25;
+      /* zinc-700 */
+      --color-surface-hover-rgb: 82 82 91;
+      /* zinc-600 */
+      --color-border-rgb: 39 39 42;
+      /* zinc-800 */
+      --color-border-strong-rgb: 113 113 122;
+      /* zinc-500 */
+      --color-border-subtle-rgb: 52 52 56;
+      /* zinc-750 */
+  
+      /* Text Palette - High contrast for readability */
+      --color-text-primary-rgb: 250 250 250;
+      /* zinc-50 - bright white */
+      --color-text-secondary-rgb: 228 228 231;
+      /* zinc-200 */
+      --color-text-muted-rgb: 161 161 170;
+      /* zinc-400 */
+      --color-text-inverted-rgb: 24 24 27;
+      /* zinc-900 */
+  
+      /* Primary (Bright Blue) - High contrast */
+      --color-primary-rgb: 96 165 250;
+      /* blue-400 */
+      --color-primary-focus-rgb: 59 130 246;
+      /* blue-500 */
+      --color-primary-text-rgb: 9 9 11;
+      /* zinc-950 */
+      --color-primary-subtle-bg-rgb: 30 58 138;
+      /* blue-900 */
+      --color-primary-subtle-text-rgb: 191 219 254;
+      /* blue-200 */
+      --color-focus-ring-rgb: 147 197 253;
+      /* blue-300 */
+  
+      /* Accent (Bright Teal) */
+      --color-accent-rgb: 45 212 191;
+      /* teal-400 */
+      --color-accent-text-rgb: 153 246 228;
+      /* teal-200 */
+      --color-accent-subtle-bg-rgb: 19 78 74;
+      /* teal-900 */
+      --color-accent-selected-bg-rgb: 17 94 89;
+      /* teal-800 */
+  
+      /* Destructive (Bright Red) */
+      --color-destructive-rgb: 248 113 113;
+      /* red-400 */
+      --color-destructive-hover-rgb: 239 68 68;
+      /* red-500 */
+      --color-destructive-subtle-bg-rgb: 127 29 29;
+      /* red-900 */
+      --color-destructive-subtle-text-rgb: 254 202 202;
+      /* red-200 */
+  
+      /* Warning (Bright Amber) */
+      --color-warning-text-rgb: 251 191 36;
+      /* amber-400 */
+  
+      /* Part of Speech Colors - High contrast, vibrant but not overwhelming */
+      --color-pos-noun-bg-rgb: 30 58 138;
+      /* blue-900 */
+      --color-pos-noun-text-rgb: 191 219 254;
+      /* blue-200 */
+      --color-pos-verb-bg-rgb: 22 78 99;
+      /* cyan-900 */
+      --color-pos-verb-text-rgb: 165 243 252;
+      /* cyan-200 */
+      --color-pos-particle-bg-rgb: 51 65 85;
+      /* slate-800 */
+      --color-pos-particle-text-rgb: 203 213 225;
+      /* slate-300 */
+      --color-pos-adjective-bg-rgb: 76 29 149;
+      /* violet-900 */
+      --color-pos-adjective-text-rgb: 221 214 254;
+      /* violet-200 */
+      --color-pos-adverb-bg-rgb: 19 78 74;
+      /* teal-900 */
+      --color-pos-adverb-text-rgb: 153 246 228;
+      /* teal-200 */
+      --color-pos-auxiliary-bg-rgb: 120 53 15;
+      /* amber-900 */
+      --color-pos-auxiliary-text-rgb: 254 215 170;
+      /* amber-200 */
+      --color-pos-conjunction-bg-rgb: 112 26 117;
+      /* fuchsia-900 */
+      --color-pos-conjunction-text-rgb: 240 171 252;
+      /* fuchsia-200 */
+      --color-pos-suffix-bg-rgb: 68 64 60;
+      /* stone-800 */
+      --color-pos-suffix-text-rgb: 214 211 209;
+      /* stone-300 */
+  
+      /* Grammar Pattern Underline Colors - Bright and distinct */
+      --color-pattern-0-rgb: 96 165 250;
+      /* blue-400 */
+      --color-pattern-1-rgb: 74 222 128;
+      /* green-400 */
+      --color-pattern-2-rgb: 251 191 36;
+      /* amber-400 */
+      --color-pattern-3-rgb: 167 139 250;
+      /* violet-400 */
+      --color-pattern-4-rgb: 244 114 182;
+      /* pink-400 */
+      --color-pattern-5-rgb: 45 212 191;
+      /* teal-400 */
+      --color-pattern-6-rgb: 248 113 113;
+      /* red-400 */
+      --color-pattern-7-rgb: 129 140 248;
+      /* indigo-400 */
+      --color-pattern-8-rgb: 34 211 238;
+      /* cyan-400 */
+      --color-pattern-9-rgb: 232 121 249;
+      /* fuchsia-400 */
+      --color-pattern-10-rgb: 251 146 60;
+      /* orange-400 */
+      --color-pattern-11-rgb: 156 163 175;
+      /* gray-400 */
+    }
+  </style>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // Convert RGB triplet variables to a format Tailwind understands
+    const toTWColor = (variable) => `rgb(var(${variable}) / <alpha-value>)`;
+
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            'pattern-0': { DEFAULT: '#2563eb', DARK: '#60a5fa' },   // blue
-            'pattern-1': { DEFAULT: '#059669', DARK: '#34d399' },   // emerald
-            'pattern-2': { DEFAULT: '#d97706', DARK: '#fbbf24' },   // amber
-            'pattern-3': { DEFAULT: '#7c3aed', DARK: '#a78bfa' },   // violet
-            'pattern-4': { DEFAULT: '#db2777', DARK: '#f472b6' },   // pink
-            'pattern-5': { DEFAULT: '#0d9488', DARK: '#2dd4bf' },   // teal
-            'pattern-6': { DEFAULT: '#dc2626', DARK: '#f87171' },   // red
-            'pattern-7': { DEFAULT: '#4338ca', DARK: '#818cf8' },   // indigo
-            'pattern-8': { DEFAULT: '#0891b2', DARK: '#22d3ee' },   // cyan
-            'pattern-9': { DEFAULT: '#c026d3', DARK: '#e879f9' },   // fuchsia
-            'pattern-10': { DEFAULT: '#ea580c', DARK: '#fb923c' }, // orange
-            'pattern-11': { DEFAULT: '#475569', DARK: '#94a3b8' }, // slate
+            // Base Palette
+            background: toTWColor('--color-background-rgb'),
+            surface: toTWColor('--color-surface-rgb'),
+            'surface-soft': toTWColor('--color-surface-soft-rgb'),
+            'surface-subtle': toTWColor('--color-surface-subtle-rgb'),
+            'surface-hover': toTWColor('--color-surface-hover-rgb'),
+            border: toTWColor('--color-border-rgb'),
+            'border-strong': toTWColor('--color-border-strong-rgb'),
+            'border-subtle': toTWColor('--color-border-subtle-rgb'),
+            
+            // Text Palette
+            'text-primary': toTWColor('--color-text-primary-rgb'),
+            'text-secondary': toTWColor('--color-text-secondary-rgb'),
+            'text-muted': toTWColor('--color-text-muted-rgb'),
+            'text-inverted': toTWColor('--color-text-inverted-rgb'),
+            
+            // Primary (Indigo)
+            primary: toTWColor('--color-primary-rgb'),
+            'primary-focus': toTWColor('--color-primary-focus-rgb'),
+            'primary-text': toTWColor('--color-primary-text-rgb'),
+            'primary-subtle-bg': toTWColor('--color-primary-subtle-bg-rgb'),
+            'primary-subtle-text': toTWColor('--color-primary-subtle-text-rgb'),
+            'focus-ring': toTWColor('--color-focus-ring-rgb'),
+            
+            // Accent (Sky)
+            accent: toTWColor('--color-accent-rgb'),
+            'accent-text': toTWColor('--color-accent-text-rgb'),
+            'accent-subtle-bg': toTWColor('--color-accent-subtle-bg-rgb'),
+            'accent-selected-bg': toTWColor('--color-accent-selected-bg-rgb'),
+
+            // Destructive (Red)
+            destructive: toTWColor('--color-destructive-rgb'),
+            'destructive-hover': toTWColor('--color-destructive-hover-rgb'),
+            'destructive-subtle-bg': toTWColor('--color-destructive-subtle-bg-rgb'),
+            'destructive-subtle-text': toTWColor('--color-destructive-subtle-text-rgb'),
+
+            // Warning (Amber)
+            'warning-text': toTWColor('--color-warning-text-rgb'),
+            
+            // Part of Speech Colors
+            'pos-noun-bg': toTWColor('--color-pos-noun-bg-rgb'),
+            'pos-noun-text': toTWColor('--color-pos-noun-text-rgb'),
+            'pos-verb-bg': toTWColor('--color-pos-verb-bg-rgb'),
+            'pos-verb-text': toTWColor('--color-pos-verb-text-rgb'),
+            'pos-particle-bg': toTWColor('--color-pos-particle-bg-rgb'),
+            'pos-particle-text': toTWColor('--color-pos-particle-text-rgb'),
+            'pos-adjective-bg': toTWColor('--color-pos-adjective-bg-rgb'),
+            'pos-adjective-text': toTWColor('--color-pos-adjective-text-rgb'),
+            'pos-adverb-bg': toTWColor('--color-pos-adverb-bg-rgb'),
+            'pos-adverb-text': toTWColor('--color-pos-adverb-text-rgb'),
+            'pos-auxiliary-bg': toTWColor('--color-pos-auxiliary-bg-rgb'),
+            'pos-auxiliary-text': toTWColor('--color-pos-auxiliary-text-rgb'),
+            'pos-conjunction-bg': toTWColor('--color-pos-conjunction-bg-rgb'),
+            'pos-conjunction-text': toTWColor('--color-pos-conjunction-text-rgb'),
+            'pos-suffix-bg': toTWColor('--color-pos-suffix-bg-rgb'),
+            'pos-suffix-text': toTWColor('--color-pos-suffix-text-rgb'),
+
+            // Grammar Pattern Underline Colors
+            'pattern-0': toTWColor('--color-pattern-0-rgb'),
+            'pattern-1': toTWColor('--color-pattern-1-rgb'),
+            'pattern-2': toTWColor('--color-pattern-2-rgb'),
+            'pattern-3': toTWColor('--color-pattern-3-rgb'),
+            'pattern-4': toTWColor('--color-pattern-4-rgb'),
+            'pattern-5': toTWColor('--color-pattern-5-rgb'),
+            'pattern-6': toTWColor('--color-pattern-6-rgb'),
+            'pattern-7': toTWColor('--color-pattern-7-rgb'),
+            'pattern-8': toTWColor('--color-pattern-8-rgb'),
+            'pattern-9': toTWColor('--color-pattern-9-rgb'),
+            'pattern-10': toTWColor('--color-pattern-10-rgb'),
+            'pattern-11': toTWColor('--color-pattern-11-rgb'),
           },
           fontFamily: {
             'reading': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
@@ -69,16 +394,16 @@
       
       /* Custom styles for the range slider thumb */
       input[type=range]::-webkit-slider-thumb {
-        @apply w-5 h-5 bg-indigo-600 dark:bg-indigo-400 rounded-full appearance-none cursor-pointer transition-all duration-200 shadow-lg;
+        @apply w-5 h-5 bg-primary rounded-full appearance-none cursor-pointer transition-all duration-200 shadow-lg;
       }
       input[type=range]::-webkit-slider-thumb:hover {
-        @apply scale-110 bg-indigo-700 dark:bg-indigo-300;
+        @apply scale-110 bg-primary-focus;
       }
       input[type=range]::-moz-range-thumb {
-        @apply w-5 h-5 bg-indigo-600 dark:bg-indigo-400 rounded-full cursor-pointer border-none transition-all duration-200 shadow-lg;
+        @apply w-5 h-5 bg-primary rounded-full cursor-pointer border-none transition-all duration-200 shadow-lg;
       }
       input[type=range]::-moz-range-thumb:hover {
-        @apply scale-110 bg-indigo-700 dark:bg-indigo-300;
+        @apply scale-110 bg-primary-focus;
       }
 
       /* Font size scaling */
@@ -107,7 +432,7 @@
     }
     
     body {
-      @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-reading antialiased transition-colors duration-300;
+      @apply bg-background text-text-primary font-reading antialiased transition-colors duration-300;
       font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
     }
     
@@ -128,11 +453,11 @@
     }
     
     ::-webkit-scrollbar-thumb {
-      @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+      @apply bg-border-strong rounded-full;
     }
     
     ::-webkit-scrollbar-thumb:hover {
-      @apply bg-slate-400 dark:bg-slate-500;
+      @apply bg-text-muted;
     }
     
     /* Custom rule for color coding toggle */
@@ -145,13 +470,13 @@
     /* Focus states for better accessibility */
     
     .focus-ring {
-      @apply focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 focus:ring-opacity-50;
+      @apply focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2 focus:ring-offset-surface focus:ring-opacity-50;
     }
     
     /* Solid background for panels */
     
     .glass-morphism {
-      @apply bg-white dark:bg-slate-900;
+      @apply bg-surface;
     }
     
     /* Smooth hover transitions */
@@ -163,15 +488,15 @@
     /* Better button styles */
     
     .btn-primary {
-      @apply bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-medium px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] focus-ring;
+      @apply bg-gradient-to-r from-primary to-primary-focus hover:from-primary-focus hover:to-primary text-primary-text font-medium px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] focus-ring;
     }
     
     .btn-secondary {
-      @apply bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus-ring;
+      @apply bg-surface text-text-secondary border border-border hover:bg-surface-hover font-medium px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus-ring;
     }
     
     .btn-ghost {
-      @apply text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors duration-200 focus-ring;
+      @apply text-text-secondary hover:text-text-primary hover:bg-surface-hover p-2 rounded-lg transition-colors duration-200 focus-ring;
     }
   </style>
   <script type="importmap">
@@ -181,21 +506,21 @@
       }
     }
   </script>
-  <script type="module" crossorigin src="/japanese-reader/assets/index-CgbhY3cr.js"></script>
+  <script type="module" crossorigin src="/japanese-reader/assets/index-DfFxvhUN.js"></script>
 </head>
 
-<body class="h-screen bg-white dark:bg-slate-900">
+<body class="h-screen bg-background">
   <!-- Main container with improved spacing and centering -->
   <div class="w-full md:container md:mx-auto md:px-4 md:py-6 max-w-5xl">
     <main id="app"
-      class="bg-white dark:bg-slate-900 md:rounded-2xl md:shadow-xl md:border border-slate-200 dark:border-slate-800 w-full">
+      class="bg-surface md:rounded-2xl md:shadow-xl md:border border-border w-full">
       <!-- Header with cleaner design -->
       <header id="app-header"
-        class="flex justify-between items-center px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 md:rounded-t-2xl">
+        class="flex justify-between items-center px-4 py-3 border-b border-border bg-gradient-to-r from-background to-surface md:rounded-t-2xl">
         <div class="flex items-center gap-4">
           <div
-            class="px-4 py-1 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-            <span class="font-japanese font-bold text-white text-xl select-none">積ん読</span>
+            class="px-4 py-1 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <span class="font-japanese font-bold text-primary-text text-xl select-none dark:text-white">積読</span>
           </div>
         </div>
 
@@ -226,91 +551,91 @@
 
             <!-- Enhanced Settings Menu -->
             <div id="settings-menu"
-              class="hidden absolute top-full right-0 mt-3 w-96 glass-morphism rounded-xl shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700 z-20 origin-top-right animate-fade-in">
+              class="hidden absolute top-full right-0 mt-3 w-[95vw] max-w-sm glass-morphism rounded-xl shadow-2xl ring-1 ring-border-subtle z-20 origin-top-right animate-fade-in">
               <div class="p-4 space-y-4">
                 <!-- Toggle switches with better styling -->
                 <div class="grid grid-cols-2 gap-x-6 gap-y-3">
                   <div class="flex items-center justify-between">
                     <label for="pitch-accent-checkbox"
-                      class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Pitch Accent</label>
+                      class="text-sm font-medium text-text-secondary cursor-pointer">Pitch Accent</label>
                     <label for="pitch-accent-checkbox"
-                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 dark:bg-slate-700 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 cursor-pointer">
+                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-surface-subtle transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-focus-ring focus-within:ring-offset-2 cursor-pointer">
                       <input type="checkbox" id="pitch-accent-checkbox" class="sr-only peer">
                       <span
-                        class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-300 transition-transform peer-checked:translate-x-5 peer-checked:bg-indigo-600 dark:peer-checked:bg-indigo-400 shadow-sm"></span>
+                        class="ml-1 inline-block h-4 w-4 transform rounded-full bg-surface transition-transform peer-checked:translate-x-5 peer-checked:bg-primary shadow-sm"></span>
                     </label>
                   </div>
 
                   <div class="flex items-center justify-between">
                     <label for="furigana-checkbox"
-                      class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Furigana <span
-                        class="text-xs text-slate-500">(F)</span></label>
+                      class="text-sm font-medium text-text-secondary cursor-pointer">Furigana <span
+                        class="text-xs text-text-muted">(F)</span></label>
                     <label for="furigana-checkbox"
-                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 dark:bg-slate-700 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 cursor-pointer">
+                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-surface-subtle transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-focus-ring focus-within:ring-offset-2 cursor-pointer">
                       <input type="checkbox" id="furigana-checkbox" class="sr-only peer">
                       <span
-                        class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-300 transition-transform peer-checked:translate-x-5 peer-checked:bg-indigo-600 dark:peer-checked:bg-indigo-400 shadow-sm"></span>
+                        class="ml-1 inline-block h-4 w-4 transform rounded-full bg-surface transition-transform peer-checked:translate-x-5 peer-checked:bg-primary shadow-sm"></span>
                     </label>
                   </div>
 
                   <div class="flex items-center justify-between">
                     <label for="color-coding-checkbox"
-                      class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">POS Colors <span class="text-xs text-slate-500">(C)</span></label>
+                      class="text-sm font-medium text-text-secondary cursor-pointer">POS Colors <span class="text-xs text-text-muted">(C)</span></label>
                     <label for="color-coding-checkbox"
-                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 dark:bg-slate-700 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 cursor-pointer">
+                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-surface-subtle transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-focus-ring focus-within:ring-offset-2 cursor-pointer">
                       <input type="checkbox" id="color-coding-checkbox" class="sr-only peer">
                       <span
-                        class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-300 transition-transform peer-checked:translate-x-5 peer-checked:bg-indigo-600 dark:peer-checked:bg-indigo-400 shadow-sm"></span>
+                        class="ml-1 inline-block h-4 w-4 transform rounded-full bg-surface transition-transform peer-checked:translate-x-5 peer-checked:bg-primary shadow-sm"></span>
                     </label>
                   </div>
 
                   <div class="flex items-center justify-between">
                     <label for="theme-checkbox"
-                      class="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Dark Mode</label>
+                      class="text-sm font-medium text-text-secondary cursor-pointer">Dark Mode</label>
                     <label for="theme-checkbox"
-                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 dark:bg-slate-700 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 cursor-pointer">
+                      class="relative inline-flex h-6 w-11 items-center rounded-full bg-surface-subtle transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-focus-ring focus-within:ring-offset-2 cursor-pointer">
                       <input type="checkbox" id="theme-checkbox" class="sr-only peer">
                       <span
-                        class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-slate-300 transition-transform peer-checked:translate-x-5 peer-checked:bg-indigo-600 dark:peer-checked:bg-indigo-400 shadow-sm"></span>
+                        class="ml-1 inline-block h-4 w-4 transform rounded-full bg-surface transition-transform peer-checked:translate-x-5 peer-checked:bg-primary shadow-sm"></span>
                     </label>
                   </div>
                 </div>
 
-                <hr class="border-slate-200 dark:border-slate-700">
+                <hr class="border-border-subtle">
 
                 <!-- Improved sliders -->
                 <div class="space-y-3">
                   <div>
                     <div class="flex items-center justify-between mb-2">
                       <label for="analysis-depth-slider"
-                        class="text-sm font-medium text-slate-700 dark:text-slate-300">Analysis Depth</label>
+                        class="text-sm font-medium text-text-secondary">Analysis Depth</label>
                       <span id="analysis-depth-label"
-                        class="text-xs font-semibold px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">Medium</span>
+                        class="text-xs font-semibold px-2 py-1 rounded-full bg-primary-subtle-bg text-primary-subtle-text">Medium</span>
                     </div>
                     <input type="range" id="analysis-depth-slider" min="0" max="2" step="1"
-                      class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                      class="w-full h-2 bg-surface-subtle rounded-lg appearance-none cursor-pointer">
                   </div>
 
                   <div>
                     <div class="flex items-center justify-between mb-2">
                       <label for="font-size-slider"
-                        class="text-sm font-medium text-slate-700 dark:text-slate-300">Font Size</label>
+                        class="text-sm font-medium text-text-secondary">Font Size</label>
                       <span id="font-size-label"
-                        class="text-xs font-semibold px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">Normal</span>
+                        class="text-xs font-semibold px-2 py-1 rounded-full bg-primary-subtle-bg text-primary-subtle-text">Normal</span>
                     </div>
                     <input type="range" id="font-size-slider" min="0" max="5" step="1" value="2"
-                      class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                      class="w-full h-2 bg-surface-subtle rounded-lg appearance-none cursor-pointer">
                   </div>
                 </div>
 
-                <hr class="border-slate-200 dark:border-slate-700">
+                <hr class="border-border-subtle">
 
                 <!-- Data management with better buttons -->
                 <div>
-                  <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Data Management</p>
+                  <p class="text-sm font-medium text-text-secondary mb-3">Data Management</p>
                   <div class="flex gap-2">
                     <button id="export-data-button"
-                      class="flex-1 text-xs font-medium px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors inline-flex items-center justify-center gap-2">
+                      class="flex-1 text-xs font-medium px-3 py-2 rounded-lg bg-surface-soft text-text-secondary hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -319,7 +644,7 @@
                       Export
                     </button>
                     <label for="import-file-input" id="import-data-button"
-                      class="flex-1 text-xs font-medium px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer inline-flex items-center justify-center gap-2">
+                      class="flex-1 text-xs font-medium px-3 py-2 rounded-lg bg-surface-soft text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer inline-flex items-center justify-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -331,24 +656,24 @@
                   </div>
                 </div>
 
-                <hr class="border-slate-200 dark:border-slate-700">
+                <hr class="border-border-subtle">
 
                 <!-- API key section -->
                 <div>
                   <label for="api-key-input"
-                    class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Gemini API Key</label>
+                    class="text-sm font-medium text-text-secondary mb-2 block">Gemini API Key</label>
                   <div class="flex gap-2">
                     <input type="password" id="api-key-input" placeholder="Using built-in key"
-                      class="flex-grow rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-3 py-2 focus-ring">
+                      class="flex-grow rounded-lg border-border-subtle bg-surface-soft text-sm px-3 py-2 focus-ring">
                     <button id="save-api-key-button" title="Save API Key"
-                      class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                      class="px-3 py-2 rounded-lg bg-primary hover:bg-primary-focus text-primary-text transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </button>
                   </div>
-                  <p id="api-key-status" class="text-xs text-slate-500 dark:text-slate-400 mt-2"></p>
+                  <p id="api-key-status" class="text-xs text-text-muted mt-2"></p>
                 </div>
               </div>
             </div>
@@ -357,21 +682,21 @@
       </header>
 
       <!-- Input area with improved design -->
-      <div class="input-area p-6 bg-gradient-to-b from-slate-50/50 to-white dark:from-slate-900/50 dark:to-slate-900">
+      <div class="h-screen md:h-auto input-area p-6 bg-gradient-to-b from-background/50 to-surface">
         <div class="space-y-4">
           <div>
             <label for="text-title-input"
-              class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Title</label>
+              class="block text-sm font-medium text-text-secondary mb-2">Title</label>
             <input type="text" id="text-title-input" placeholder="Enter a title for your text..."
-              class="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus-ring text-lg font-medium px-4 py-3">
+              class="w-full rounded-xl border-border-subtle bg-surface shadow-sm focus-ring text-lg font-medium px-4 py-3">
           </div>
           <div>
             <label for="sentence-input"
-              class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Japanese Text</label>
+              class="block text-sm font-medium text-text-secondary mb-2">Japanese Text</label>
             <textarea id="sentence-input" placeholder="Enter Japanese text here. e.g., 猫が大好きです。犬も好きです。" rows="6"
-              class="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus-ring text-base px-4 py-3 font-japanese resize-none transition-all duration-200"></textarea>
+              class="w-full rounded-xl border-border-subtle bg-surface shadow-sm focus-ring text-base px-4 py-3 font-japanese resize-none transition-all duration-200"></textarea>
           </div>
-          <button id="generate-button" class="w-full btn-primary text-lg flex items-center justify-center gap-3">
+          <button id="generate-button" class="w-full btn-primary text-lg text-text-primary flex items-center justify-center gap-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             Analyze Text
           </button>
@@ -379,7 +704,7 @@
       </div>
 
       <!-- Results container -->
-      <div id="result-container" aria-live="polite" class="p-6">
+      <div id="result-container" aria-live="polite" class="min-h-screen md:h-auto p-6">
         <!-- Main view for editor/multi-sentence reader -->
         <div id="main-view">
           <div id="reader-view" class="prose prose-slate dark:prose-invert max-w-none"></div>
@@ -395,12 +720,12 @@
 
   <!-- History panel with improved design -->
   <div id="history-panel"
-    class="fixed top-0 right-0 h-full w-full max-w-md glass-morphism shadow-2xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
-    <header class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-      <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">My Texts</h2>
+    class="fixed top-0 right-0 h-full w-full max-w-md glass-morphism shadow-2xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-border">
+    <header class="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+      <h2 class="text-xl font-bold text-text-primary">My Texts</h2>
       <div class="flex items-center gap-2">
         <button id="clear-history-button" title="Delete All Texts"
-          class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+          class="p-2 rounded-lg text-text-muted hover:bg-destructive-subtle-bg hover:text-destructive transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
             stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round"
@@ -416,31 +741,31 @@
       </div>
     </header>
     <div class="flex-grow overflow-y-auto">
-      <ul id="history-list" class="divide-y divide-slate-200 dark:divide-slate-700">
+      <ul id="history-list" class="divide-y divide-border">
         <!-- History items will be injected here -->
       </ul>
       <div id="history-empty-message" class="hidden text-center p-8">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-400 dark:text-slate-600 mx-auto mb-4"
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-text-muted/50 mx-auto mb-4"
           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <p class="text-slate-500 dark:text-slate-400">You have no saved texts yet.</p>
-        <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Start by analyzing some Japanese text!</p>
+        <p class="text-text-muted">You have no saved texts yet.</p>
+        <p class="text-sm text-text-muted/70 mt-1">Start by analyzing some Japanese text!</p>
       </div>
     </div>
   </div>
 
   <div id="history-panel-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 transition-opacity opacity-0 invisible"></div>
   
-  <div id="tooltip" class="fixed z-50 max-w-sm rounded-xl glass-morphism border border-gray-200/50 dark:border-gray-700/50 shadow-2xl p-4 text-base transition-all duration-200 opacity-0 invisible pointer-events-none max-h-96 overflow-y-auto"></div>
+  <div id="tooltip" class="fixed z-50 max-w-sm rounded-xl glass-morphism border border-border/50 shadow-2xl p-4 text-base transition-all duration-200 opacity-0 invisible pointer-events-none max-h-96 overflow-y-auto"></div>
   
   <div id="modal-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] transition-opacity opacity-0 invisible flex items-center justify-center p-4">
     <div id="modal-box" class="glass-morphism rounded-2xl shadow-2xl p-8 w-full max-w-md transform scale-95 opacity-0 transition-all">
-      <p id="modal-message" class="text-gray-800 dark:text-gray-200 text-lg mb-8"></p>
+      <p id="modal-message" class="text-text-secondary text-lg mb-8"></p>
       <div class="flex justify-end gap-4">
-        <button id="modal-cancel-button" class="px-5 py-3 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 bg-gray-200/70 dark:bg-gray-700/70 hover:bg-gray-300/80 dark:hover:bg-gray-600/80 transition-colors shadow-neumorphic-sm dark:shadow-neumorphic-sm-dark">Cancel</button>
-        <button id="modal-confirm-button" class="px-5 py-3 rounded-xl text-base font-medium text-white bg-red-600 hover:bg-red-700 transition-colors shadow-lg">Confirm</button>
+        <button id="modal-cancel-button" class="px-5 py-3 rounded-xl text-base font-medium text-text-secondary bg-surface-subtle hover:bg-surface-hover transition-colors shadow-sm">Cancel</button>
+        <button id="modal-confirm-button" class="px-5 py-3 rounded-xl text-base font-medium text-primary-text bg-destructive hover:bg-destructive-hover transition-colors shadow-lg">Confirm</button>
       </div>
     </div>
   </div>
