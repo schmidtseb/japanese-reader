@@ -50,7 +50,13 @@ export const modalMessage = document.getElementById('modal-message') as HTMLPara
 export const modalConfirmButton = document.getElementById('modal-confirm-button') as HTMLButtonElement;
 export const modalCancelButton = document.getElementById('modal-cancel-button') as HTMLButtonElement;
 
+// Bottom sheet elements
+export const bottomSheet = document.getElementById('bottom-sheet') as HTMLDivElement;
+export const bottomSheetTitle = document.getElementById('bottom-sheet-title') as HTMLHeadingElement;
+export const bottomSheetContent = document.getElementById('bottom-sheet-content') as HTMLDivElement;
+export const bottomSheetCloseButton = document.getElementById('bottom-sheet-close-button') as HTMLButtonElement;
 
-if (!button || !sentenceInput || !textTitleInput || !resultContainer || !inputArea || !mainView || !readerView || !analysisView || !readingModeView || !themeCheckbox || !furiganaCheckbox || !colorCodingCheckbox || !pitchAccentCheckbox || !tooltip || !settingsButton || !settingsMenu || !newTextButton || !historyButton || !historyPanel || !closeHistoryButton || !clearHistoryButton || !historyList || !historyEmptyMessage || !historyPanelOverlay || !analysisDepthSlider || !analysisDepthLabel || !fontSizeSlider || !fontSizeLabel || !exportDataButton || !importDataButton || !importFileInput || !apiKeyInput || !saveApiKeyButton || !apiKeyStatus || !modalOverlay || !modalBox || !modalMessage || !modalConfirmButton || !modalCancelButton || !appHeader) {
+
+if (!button || !sentenceInput || !textTitleInput || !resultContainer || !inputArea || !mainView || !readerView || !analysisView || !readingModeView || !themeCheckbox || !furiganaCheckbox || !colorCodingCheckbox || !pitchAccentCheckbox || !tooltip || !settingsButton || !settingsMenu || !newTextButton || !historyButton || !historyPanel || !closeHistoryButton || !clearHistoryButton || !historyList || !historyEmptyMessage || !historyPanelOverlay || !analysisDepthSlider || !analysisDepthLabel || !fontSizeSlider || !fontSizeLabel || !exportDataButton || !importDataButton || !importFileInput || !apiKeyInput || !saveApiKeyButton || !apiKeyStatus || !modalOverlay || !modalBox || !modalMessage || !modalConfirmButton || !modalCancelButton || !appHeader || !bottomSheet || !bottomSheetTitle || !bottomSheetContent || !bottomSheetCloseButton) {
   throw new Error('Required HTML elements not found at startup.');
 }

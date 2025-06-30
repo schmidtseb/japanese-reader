@@ -1,12 +1,13 @@
 
 // ui/handlers.ts
 import { loadSpeechSynthesisVoices } from '../services/tts.ts';
-import { setupSmartTooltip } from './tooltip.ts';
+import { setupSmartTooltip, hideTooltip } from './tooltip.ts';
 import { setupModal } from './modal.ts';
 import { initializeSettings } from './controllers/settings.ts';
 import { initializeHistory } from './controllers/history.ts';
 import { initializeMainController } from './controllers/main.ts';
 import { applyDisplayOptions } from './view.ts';
+import { initializeBottomSheet, hideBottomSheet } from './bottomSheet.ts';
 
 // LocalStorage Keys
 export const HISTORY_KEY = 'japanese-analyzer-history-v2';
@@ -25,9 +26,21 @@ export function initializeApp() {
     initializeSettings();
     initializeHistory();
     initializeMainController();
+    initializeBottomSheet();
 
     loadSpeechSynthesisVoices();
     setupSmartTooltip();
     setupModal();
     applyDisplayOptions(); // Apply initial display options on load
+
+    // Add resize listener to handle responsive UI changes
+    window.addEventListener('resize', () => {
+        // If window is now desktop-sized, hide the bottom sheet
+        if (window.innerWidth >= 768) {
+            hideBottomSheet();
+        } else {
+            // If window is now mobile-sized, hide the tooltip
+            hideTooltip();
+        }
+    });
 }

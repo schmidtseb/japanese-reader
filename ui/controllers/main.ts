@@ -11,23 +11,24 @@ import { renderHistoryPanel } from '../render/history.ts';
 import { showError } from '../render/common.ts';
 import { applyDisplayOptions, formatApiError, updateProcessButtonState, resetToNewTextView } from '../view.ts';
 import { performAndCacheAnalysis, startReadingMode, loadTextEntry } from '../actions.ts';
+import { showBottomSheetForSegment, hideBottomSheet } from '../bottomSheet.ts';
 import { UNSAVED_TITLE_KEY, UNSAVED_TEXT_KEY } from '../handlers.ts';
 import { saveHistory } from './history.ts';
 
 
 /** Toggles the visibility of the translation content and updates the button state. */
-function toggleTranslationVisibility(button: HTMLButtonElement) {
-    const content = button.closest('.p-4.rounded-lg')?.querySelector<HTMLElement>('#translation-content');
+function toggleSentenceTranslation(button: HTMLButtonElement) {
+    const viewContainer = button.closest('#analysis-view, #reading-mode-view');
+    if (!viewContainer) return;
+    
+    const content = viewContainer.querySelector<HTMLElement>('#sentence-translation-content');
     if (!content) return;
 
     const isHidden = content.classList.contains('hidden');
     content.classList.toggle('hidden');
-    button.setAttribute('aria-expanded', String(!isHidden));
-
-    const buttonText = button.querySelector<HTMLSpanElement>('.button-text');
-    if (buttonText) {
-        buttonText.textContent = isHidden ? 'Hide' : 'Show';
-    }
+    button.setAttribute('aria-pressed', String(!isHidden));
+    // Add a visual indicator to the button when it's active
+    button.classList.toggle('bg-accent-subtle-bg', !isHidden);
 }
 
 function setupProcessButtonListener() {
@@ -114,7 +115,7 @@ function setupMainViewListeners() {
 
         const toggleTranslationBtn = target.closest('#toggle-translation-button');
         if (toggleTranslationBtn) {
-            toggleTranslationVisibility(toggleTranslationBtn as HTMLButtonElement);
+            toggleSentenceTranslation(toggleTranslationBtn as HTMLButtonElement);
             return;
         }
 
@@ -151,6 +152,7 @@ function setupMainViewListeners() {
             }
 
             hideTooltip();
+            hideBottomSheet();
             dom.readerView.querySelectorAll('.clickable-sentence').forEach(el => el.classList.remove('selected', 'bg-accent-selected-bg/60', 'dark:bg-accent-selected-bg/30', 'font-semibold'));
             sentenceEl.classList.add('selected', 'bg-accent-selected-bg/60', 'dark:bg-accent-selected-bg/30', 'font-semibold');
             
@@ -195,11 +197,17 @@ function setupMainViewListeners() {
         }
 
         if (target.closest('a.underline')) { event.stopPropagation(); return; }
+        
         const segment = target.closest<HTMLElement>('.segment');
         if (segment && dom.analysisView.contains(segment)) {
             event.stopPropagation(); 
             if (dom.analysisView.querySelector('.is-focused')) return;
-            isTooltipPinnedFor(segment) ? hideTooltip() : pinTooltipFor(segment);
+            
+            if (window.innerWidth < 768) { // Mobile
+                showBottomSheetForSegment(segment);
+            } else { // Desktop
+                isTooltipPinnedFor(segment) ? hideTooltip() : pinTooltipFor(segment);
+            }
         }
     });
 }
@@ -215,7 +223,6 @@ function setupReadingModeListeners() {
             const entry = state.findTextEntryById(state.currentTextEntryId);
             if (!entry) return;
 
-            // Force re-analysis by deleting cache and re-running startReadingMode
             const sentenceIndex = entry.readingProgress;
             const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
             const sentence = sentences[sentenceIndex];
@@ -228,10 +235,31 @@ function setupReadingModeListeners() {
             startReadingMode(entry, sentenceIndex);
             return;
         }
+        
+        const headerToggleBtn = target.closest('#reading-header-toggle');
+        if (headerToggleBtn) {
+            const header = document.getElementById('reading-mode-header');
+            if (header) {
+                const isNowCollapsed = header.classList.toggle('header-collapsed');
+                headerToggleBtn.classList.toggle('is-open', !isNowCollapsed);
+            }
+            return;
+        }
 
         const toggleTranslationBtn = target.closest('#toggle-translation-button');
         if (toggleTranslationBtn) {
-            toggleTranslationVisibility(toggleTranslationBtn as HTMLButtonElement);
+            toggleSentenceTranslation(toggleTranslationBtn as HTMLButtonElement);
+            return;
+        }
+
+        const segment = target.closest<HTMLElement>('.segment');
+        if (segment && dom.readingModeView.contains(segment)) {
+            event.stopPropagation();
+            if (window.innerWidth < 768) {
+                showBottomSheetForSegment(segment);
+            } else {
+                isTooltipPinnedFor(segment) ? hideTooltip() : pinTooltipFor(segment);
+            }
             return;
         }
         
@@ -428,12 +456,6 @@ function setupHotkeys() {
             if (toggleBtn) {
                 event.preventDefault();
                 toggleBtn.click();
-                
-                // After toggling, if the content is now visible, scroll to it.
-                const translationContent = toggleBtn.closest('.p-4.rounded-lg')?.querySelector<HTMLElement>('#translation-content');
-                if (translationContent && !translationContent.classList.contains('hidden')) {
-                    translationContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
             }
         }
 

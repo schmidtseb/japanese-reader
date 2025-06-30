@@ -145,32 +145,18 @@ export async function startReadingMode(entry: state.TextEntry, sentenceIndex: nu
             // Check if we are still on the same page before rendering
             const currentSentenceInput = dom.readingModeView.querySelector<HTMLInputElement>('#reading-mode-sentence-input');
             if (currentSentenceInput && parseInt(currentSentenceInput.value, 10) === sentenceIndex + 1) {
-                const contentWrapper = dom.readingModeView.querySelector<HTMLElement>('#reading-mode-content-wrapper');
-                if (contentWrapper) {
-                    contentWrapper.style.transition = 'opacity 0.2s ease-in-out';
-                    contentWrapper.style.opacity = '0';
-                    
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                dom.readingModeView.style.transition = 'opacity 0.2s ease-in-out';
+                dom.readingModeView.style.opacity = '0';
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
 
-                    // Just update the analysis content, not the whole page shell
-                    renderSingleAnalysis(contentWrapper, result, { stickyTopClass: 'top-14' });
-                    
-                    // The loading state disables the 'next' button, so we re-evaluate its state
-                    const totalSentences = sentences.length;
-                    const nextBtn = dom.readingModeView.querySelector<HTMLButtonElement>('#reading-nav-next');
-                    if (nextBtn) {
-                        nextBtn.disabled = sentenceIndex >= totalSentences - 1;
-                    }
-                    
-                    applyDisplayOptions();
-                    
-                    contentWrapper.style.opacity = '1';
-                    setTimeout(() => { contentWrapper.style.transition = ''; }, 250);
-                } else {
-                    // Fallback to full render if the wrapper is somehow not found
-                    renderReadingModeView(entry, sentenceIndex, result);
-                    applyDisplayOptions();
-                }
+                // Re-render the entire reading mode view with the new analysis data
+                renderReadingModeView(entry, sentenceIndex, result);
+                applyDisplayOptions();
+                
+                // Fade the new content back in
+                dom.readingModeView.style.opacity = '1';
+                setTimeout(() => { dom.readingModeView.style.transition = ''; }, 250);
             }
         } catch (error) {
             const err = error instanceof Error ? error : new Error('An unknown error occurred during analysis.');

@@ -83,7 +83,7 @@ export async function analyzeSentence(apiKey: string, sentence: string, depth: A
             },
         });
 
-        const response = await withTimeout(modelPromise, 30000); // 30 second timeout
+        const response = await withTimeout(modelPromise, 30000) as GenerateContentResponse; // 30 second timeout
 
         const aggregatedResponse = response.text;
         if (typeof aggregatedResponse !== 'string' || aggregatedResponse.trim() === '') {
@@ -128,7 +128,7 @@ export async function getExampleSentences(apiKey: string, patternName: string): 
             },
         });
 
-        const response = await withTimeout(modelPromise, 20000); // 20s for examples
+        const response = await withTimeout(modelPromise, 20000) as GenerateContentResponse; // 20s for examples
 
         const textResponse = response.text;
         if (typeof textResponse !== 'string' || textResponse.trim() === '') {

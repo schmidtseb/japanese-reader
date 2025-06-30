@@ -104,22 +104,25 @@ function isAnyTooltipPinned(): boolean {
 
 /** Sets up an interactive tooltip that works on hover for desktop. Click/tap is handled in handlers.ts. */
 export function setupSmartTooltip() {
-    // Hover to show (for desktop)
-    dom.resultContainer.addEventListener('mouseover', (event) => {
-        if (isAnyTooltipPinned()) return; // Don't show on hover if a tooltip is pinned
-        const segment = (event.target as HTMLElement).closest<HTMLElement>('.segment');
-        if (segment) {
-            showTooltip(segment);
-        }
-    });
+    // Only enable hover events on devices that support it (i.e., non-touch primary)
+    if (window.matchMedia('(hover: hover)').matches) {
+        // Hover to show (for desktop)
+        dom.resultContainer.addEventListener('mouseover', (event) => {
+            if (isAnyTooltipPinned()) return; // Don't show on hover if a tooltip is pinned
+            const segment = (event.target as HTMLElement).closest<HTMLElement>('.segment');
+            if (segment) {
+                showTooltip(segment);
+            }
+        });
 
-    // Mouse out to hide (for desktop)
-    dom.resultContainer.addEventListener('mouseout', (event) => {
-        if (isAnyTooltipPinned()) return; // Don't hide on mouseout if a tooltip is pinned
-        if ((event.target as HTMLElement).closest('.segment')) {
-            scheduleHide();
-        }
-    });
+        // Mouse out to hide (for desktop)
+        dom.resultContainer.addEventListener('mouseout', (event) => {
+            if (isAnyTooltipPinned()) return; // Don't hide on mouseout if a tooltip is pinned
+            if ((event.target as HTMLElement).closest('.segment')) {
+                scheduleHide();
+            }
+        });
+    }
 
     // Clicking outside the tooltip or a segment hides the pinned tooltip
     document.addEventListener('click', (event) => {
