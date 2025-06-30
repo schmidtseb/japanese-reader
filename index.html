@@ -278,6 +278,9 @@
       darkMode: 'class',
       theme: {
         extend: {
+          boxShadow: {
+            '2xl-top': '0 -25px 50px -12px rgb(0 0 0 / 0.25)',
+          },
           colors: {
             // Base Palette
             background: toTWColor('--color-background-rgb'),
@@ -425,6 +428,50 @@
       #result-container .text-base { font-size: calc(1rem * var(--font-size-multiplier)); }
       #result-container .text-sm { font-size: calc(0.875rem * var(--font-size-multiplier)); }
       #result-container .text-lg { font-size: calc(1.125rem * var(--font-size-multiplier)); }
+      #result-container .text-xl { font-size: calc(1.25rem * var(--font-size-multiplier)); }
+    }
+    
+    @layer components {
+      /* Reading Mode Collapsible Header */
+      #reading-mode-header.header-collapsed #reading-mode-nav-wrapper {
+        max-height: 0;
+        opacity: 0;
+        margin-top: -0.5rem; /* -mt-2 */
+        pointer-events: none;
+      }
+
+      #reading-mode-nav-wrapper {
+        max-height: 100px; /* Should be enough for the nav controls */
+        opacity: 1;
+        transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.3s ease-in-out;
+      }
+      
+      /* Desktop hover interaction: expand on hover of a dedicated top trigger area */
+      @media (hover: hover) and (min-width: 768px) {
+        #reading-mode-header.header-collapsed #reading-header-hover-trigger:hover + #reading-mode-content-container #reading-mode-nav-wrapper,
+        #reading-mode-header.header-collapsed #reading-mode-nav-wrapper:hover {
+          max-height: 100px;
+          opacity: 1;
+          margin-top: 0;
+          pointer-events: auto;
+        }
+      }
+
+      /* This rule is for when JS un-collapses it on mobile */
+      #reading-mode-header:not(.header-collapsed) #reading-mode-nav-wrapper {
+        max-height: 100px;
+        opacity: 1;
+        margin-top: 0;
+        pointer-events: auto;
+      }
+      
+      #reading-header-toggle svg {
+        transition: transform 0.3s ease-in-out;
+      }
+
+      #reading-header-toggle.is-open svg {
+        transform: rotate(180deg);
+      }
     }
     
     html {
@@ -506,7 +553,7 @@
       }
     }
   </script>
-  <script type="module" crossorigin src="/japanese-reader/assets/index-D-0Al4pI.js"></script>
+  <script type="module" crossorigin src="/japanese-reader/assets/index-BQWvDjMZ.js"></script>
 </head>
 
 <body class="h-screen bg-background">
@@ -758,7 +805,22 @@
 
   <div id="history-panel-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 transition-opacity opacity-0 invisible"></div>
   
-  <div id="tooltip" class="fixed z-50 max-w-sm rounded-xl glass-morphism border border-border/50 shadow-2xl p-4 text-base transition-all duration-200 opacity-0 invisible pointer-events-none max-h-96 overflow-y-auto"></div>
+  <!-- Bottom Sheet for Mobile -->
+  <div id="bottom-sheet" class="fixed bottom-0 left-0 right-0 z-20 bg-surface border-t border-border shadow-2xl-top transform translate-y-full transition-transform duration-300 ease-in-out max-h-[50vh] flex flex-col md:hidden">
+    <header class="flex justify-between items-center p-3 border-b border-border-subtle flex-shrink-0">
+        <h3 id="bottom-sheet-title" class="font-semibold text-lg text-text-primary font-japanese"></h3>
+        <button id="bottom-sheet-close-button" title="Close details" class="btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </header>
+    <div id="bottom-sheet-content" class="p-4 overflow-y-auto">
+        <!-- Content will be injected here -->
+    </div>
+  </div>
+
+  <div id="tooltip" class="fixed z-50 max-w-sm rounded-xl glass-morphism border border-border/50 shadow-2xl p-4 text-base transition-all duration-200 opacity-0 invisible pointer-events-none max-h-96 overflow-y-auto hidden md:block"></div>
   
   <div id="modal-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] transition-opacity opacity-0 invisible flex items-center justify-center p-4">
     <div id="modal-box" class="glass-morphism rounded-2xl shadow-2xl p-8 w-full max-w-md transform scale-95 opacity-0 transition-all">
