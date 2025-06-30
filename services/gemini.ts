@@ -1,9 +1,34 @@
 
 // services/gemini.ts
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { getSystemPrompt, getExampleSentenceSystemPrompt } from '../prompt.ts';
 import { JAPANESE_ANALYSIS_SCHEMA, EXAMPLE_SENTENCES_SCHEMA } from '../structured_output.ts';
 import { AnalysisDepth } from '../state.ts';
+
+/**
+ * Wraps a promise with a timeout.
+ * @param promise The promise to wrap.
+ * @param ms The timeout in milliseconds.
+ * @returns A new promise that will reject if the original promise doesn't resolve/reject within the given time.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Request timed out after ${ms / 1000} seconds`));
+    }, ms);
+
+    promise.then(
+      (res) => {
+        clearTimeout(timeoutId);
+        resolve(res);
+      },
+      (err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      }
+    );
+  });
+}
 
 /**
  * A utility function to add retry logic with exponential backoff to an API call.
@@ -46,7 +71,7 @@ export async function analyzeSentence(apiKey: string, sentence: string, depth: A
         const ai = new GoogleGenAI({ apiKey });
         const systemInstruction = getSystemPrompt(depth);
 
-        const response = await ai.models.generateContent({
+        const modelPromise = ai.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
             contents: sentence,
             config: {
@@ -58,10 +83,27 @@ export async function analyzeSentence(apiKey: string, sentence: string, depth: A
             },
         });
 
+        const response = await withTimeout(modelPromise, 30000); // 30 second timeout
+
         const aggregatedResponse = response.text;
+        if (typeof aggregatedResponse !== 'string' || aggregatedResponse.trim() === '') {
+            console.error("Gemini API returned an empty or invalid text response.", response);
+            const candidate = response.candidates?.[0];
+            if (candidate && candidate.finishReason !== 'STOP') {
+                const safetyReason = `The response may have been blocked. Reason: ${candidate.finishReason}.`;
+                throw new Error(`The AI model's response was incomplete. ${safetyReason}`);
+            }
+            throw new Error("The AI model returned an empty response. This might be due to a content filter or an internal issue.");
+        }
+        
         const jsonStr = aggregatedResponse.trim().match(/^```(?:json)?\s*\n?(.*?)\n?\s*```$/s)?.[1] || aggregatedResponse.trim();
-        const parsedData = JSON.parse(jsonStr);
-        return Array.isArray(parsedData) ? parsedData[0] : parsedData;
+        try {
+            const parsedData = JSON.parse(jsonStr);
+            return Array.isArray(parsedData) ? parsedData[0] : parsedData;
+        } catch (e) {
+            console.error("Failed to parse JSON from model response:", jsonStr);
+            throw new Error("The AI model returned a response that was not valid JSON.");
+        }
     };
     
     return withRetry(apiCall);
@@ -74,7 +116,7 @@ export async function getExampleSentences(apiKey: string, patternName: string): 
         const ai = new GoogleGenAI({ apiKey });
         const systemInstruction = getExampleSentenceSystemPrompt();
         
-        const response = await ai.models.generateContent({
+        const modelPromise = ai.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
             contents: patternName,
             config: {
@@ -85,14 +127,36 @@ export async function getExampleSentences(apiKey: string, patternName: string): 
                 seed: 42,
             },
         });
-        let jsonStr = response.text.trim().match(/^```(?:json)?\s*\n?(.*?)\n?\s*```$/s)?.[1] || response.text.trim();
-        return JSON.parse(jsonStr);
+
+        const response = await withTimeout(modelPromise, 20000); // 20s for examples
+
+        const textResponse = response.text;
+        if (typeof textResponse !== 'string' || textResponse.trim() === '') {
+            console.error(`Gemini API returned an empty or invalid text response for pattern "${patternName}".`, response);
+            const candidate = response.candidates?.[0];
+            if (candidate && candidate.finishReason !== 'STOP') {
+                const safetyReason = `The response may have been blocked. Reason: ${candidate.finishReason}.`;
+                throw new Error(`Could not generate examples for ${patternName}. ${safetyReason}`);
+            }
+            throw new Error(`The AI model returned an empty response for pattern "${patternName}".`);
+        }
+        
+        let jsonStr = textResponse.trim().match(/^```(?:json)?\s*\n?(.*?)\n?\s*```$/s)?.[1] || textResponse.trim();
+        try {
+            return JSON.parse(jsonStr);
+        } catch(e) {
+            console.error(`Failed to parse JSON examples for "${patternName}":`, jsonStr);
+            throw new Error(`The AI model returned invalid JSON for examples of "${patternName}".`);
+        }
     };
 
     try {
         return await withRetry(apiCall);
     } catch (error) {
         console.error(`Failed to get examples for "${patternName}":`, error);
+        if (error instanceof Error && (error.message.includes('JSON') || error.message.includes('timed out'))) {
+            throw error;
+        }
         throw new Error(`Could not generate examples for ${patternName}.`);
     }
 }

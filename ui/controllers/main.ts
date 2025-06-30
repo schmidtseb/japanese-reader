@@ -44,7 +44,7 @@ function setupProcessButtonListener() {
         if (currentEntryId) {
             const entryToUpdate = state.findTextEntryById(currentEntryId);
             if (entryToUpdate) {
-                const getSentences = (t: string): Set<string> => new Set(t.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []));
+                const getSentences = (t: string): Set<string> => new Set(t.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []));
                 
                 const oldSentences = getSentences(entryToUpdate.text);
                 const newSentences = getSentences(text);
@@ -142,7 +142,7 @@ function setupMainViewListeners() {
             // Update reading progress to match the clicked sentence
             const currentEntryForProgress = state.findTextEntryById(state.currentTextEntryId);
             if (currentEntryForProgress) {
-                const allSentences = currentEntryForProgress.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+                const allSentences = currentEntryForProgress.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
                 const sentenceIndex = allSentences.indexOf(sentence);
                 if (sentenceIndex !== -1) {
                     state.updateReadingProgress(currentEntryForProgress.id, sentenceIndex);
@@ -217,7 +217,7 @@ function setupReadingModeListeners() {
 
             // Force re-analysis by deleting cache and re-running startReadingMode
             const sentenceIndex = entry.readingProgress;
-            const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+            const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
             const sentence = sentences[sentenceIndex];
             
             if (entry.analyzedSentences[sentence]) {
@@ -261,7 +261,7 @@ function setupReadingModeListeners() {
         const entry = state.findTextEntryById(entryId);
         if (!entry) return;
 
-        const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+        const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
         const totalSentences = sentences.length;
         let newIndex = parseInt(target.value, 10) - 1;
         

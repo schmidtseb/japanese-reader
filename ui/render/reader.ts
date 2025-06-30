@@ -22,7 +22,7 @@ export function renderReaderView(entry: state.TextEntry) {
     
     const paragraphsRaw = entry.text.split('\n');
     const paragraphs = paragraphsRaw.map(
-        p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []
+        p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []
     );
     const allSentences = paragraphs.flat();
 
@@ -106,7 +106,7 @@ export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: num
     dom.readingModeView.innerHTML = ''; // Clear previous content
     dom.readingModeView.className = ''; // Reset container class
 
-    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
     const totalSentences = sentences.length;
 
     // 1. Navigation Header - FIXED
@@ -149,7 +149,7 @@ export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: num
 
 /** Renders a loading state for the reading mode, including sentence preview. */
 export function renderReadingModeLoading(entry: state.TextEntry, sentenceIndex: number) {
-    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
     const sentence = sentences[sentenceIndex];
     const totalSentences = sentences.length;
 

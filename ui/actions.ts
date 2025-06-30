@@ -1,4 +1,3 @@
-
 // ui/actions.ts
 import * as dom from '../dom.ts';
 import * as state from '../state.ts';
@@ -26,8 +25,37 @@ export async function performAndCacheAnalysis(entry: state.TextEntry, sentence: 
         throw new Error("API Key is not configured. Please add one in the settings menu.");
     }
     
+    // Sanitize the sentence before sending it to the API.
+    // This removes leading/trailing Japanese quotes and trims whitespace.
+    const sanitizedSentence = sentence.trim().replace(/^[「『]/, '').replace(/[」』]$/, '').trim();
+
+    // If the sentence becomes empty after sanitization (e.g., it was just "「」"),
+    // return a mock analysis instead of calling the API.
+    if (!sanitizedSentence) {
+        const mockAnalysis = {
+            original_japanese_sentence: sentence,
+            analysis: [{
+                japanese_segment: sentence,
+                reading: sentence,
+                category: 'PUNCTUATION',
+                english_equivalent: 'Punctuation/Quotes',
+                pitch_accent: ''
+            }],
+            grammar_patterns: [],
+            english_translation: '(Sentence consists only of punctuation)'
+        };
+        // Still cache this mock analysis to avoid re-processing
+        state.addAnalysisToCurrentText(sentence, mockAnalysis, depth);
+        saveHistory();
+        return Promise.resolve(mockAnalysis);
+    }
+    
     try {
-        const result = await analyzeSentence(state.apiKey, sentence.trim(), depth);
+        const result = await analyzeSentence(state.apiKey, sanitizedSentence.trim(), depth);
+        
+        // The API analyzed the sanitized sentence, so we must restore the original
+        // sentence in the final result object for consistency.
+        result.original_japanese_sentence = sentence;
         
         state.addAnalysisToCurrentText(sentence, result, depth);
         saveHistory();
@@ -44,7 +72,7 @@ export async function performAndCacheAnalysis(entry: state.TextEntry, sentence: 
 
 /** Fetches analysis for the next sentence in the background. */
 async function prefetchNextSentenceAnalysis(entry: state.TextEntry, currentIndex: number) {
-    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
     const nextIndex = currentIndex + 1;
 
     if (nextIndex < sentences.length) {
@@ -60,7 +88,7 @@ async function prefetchNextSentenceAnalysis(entry: state.TextEntry, currentIndex
 
 /** Initializes and displays the Reading Mode UI for a given text entry and sentence. */
 export async function startReadingMode(entry: state.TextEntry, sentenceIndex: number) {
-    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！\s]+[。？！]?/g)?.filter(s => s?.trim()) || []);
+    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
     if (sentenceIndex < 0 || sentenceIndex >= sentences.length || sentences.length === 0) {
         loadTextEntry(entry.id);
         return;
