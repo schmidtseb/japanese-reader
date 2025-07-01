@@ -60,10 +60,56 @@ function getSegmentDetailsHTML(segment: HTMLElement): { title: string; content: 
     return (contentHtml.trim()) ? { title, content: contentHtml } : null;
 }
 
+/** Dynamically sets the max-height of the bottom sheet to avoid overlapping sticky/fixed headers. */
+function setSheetSize() {
+    // This function handles both reading mode (fixed header) and main analysis view (sticky header).
+    let headerHeight = 0;
+    const margin = 0; // As per requirement, touching is fine, overlap is not.
+
+    // Case 1: Reading Mode (fixed header)
+    const readingHeader = document.getElementById('reading-mode-header');
+    const isReadingMode = readingHeader && !dom.readingModeView.classList.contains('hidden');
+    if (isReadingMode) {
+        headerHeight = readingHeader.offsetHeight;
+    }
+    // Case 2: Main Analysis View (sticky header)
+    else {
+        const analysisHeader = dom.analysisView.querySelector<HTMLElement>('.sticky');
+        const isAnalysisView = analysisHeader && !dom.analysisView.classList.contains('hidden');
+        if (isAnalysisView) {
+            const headerRect = analysisHeader.getBoundingClientRect();
+            // A sticky element's rect.top will be at the top of the viewport when it's "stuck".
+            // Give it a small tolerance for sub-pixel rendering.
+            if (headerRect.top <= 1) {
+                headerHeight = headerRect.height;
+            }
+        }
+    }
+
+    if (headerHeight > 0) {
+        const availableHeight = window.innerHeight - headerHeight;
+        const vh60InPixels = window.innerHeight * 0.6; // The default max-height from Tailwind (max-h-[60vh])
+        
+        // Use the smaller of the two constraints to ensure we don't exceed the intended design or overlap the header.
+        const finalMaxHeight = Math.min(availableHeight - margin, vh60InPixels);
+        dom.bottomSheet.style.maxHeight = `${finalMaxHeight}px`;
+    } else {
+        // Revert to default Tailwind class behavior if no applicable sticky/fixed header is found.
+        dom.bottomSheet.style.maxHeight = '';
+    }
+}
+
 /** Hides the bottom sheet with a smooth animation. */
 export function hideBottomSheet() {
     if (!isSheetOpen) return;
+    // Remove scroll lock from the body
+    document.body.classList.remove('overflow-hidden', 'md:overflow-auto');
+    
     dom.bottomSheet.classList.add('translate-y-full');
+    dom.bottomSheetOverlay.classList.add('opacity-0', 'invisible');
+
+    // Reset max-height so it uses the default Tailwind class on next open.
+    dom.bottomSheet.style.maxHeight = '';
     
     if (currentSegment) {
         currentSegment.classList.remove('bg-accent-selected-bg/60', 'dark:bg-accent-selected-bg/30');
@@ -102,6 +148,8 @@ export function showBottomSheetForSegment(segment: HTMLElement) {
     if (isSheetOpen) {
         dom.bottomSheetContent.style.transition = 'opacity 0.1s ease-in-out';
         dom.bottomSheetContent.style.opacity = '0';
+        // While content is invisible, recalculate the max-height in case viewport/header changed.
+        setSheetSize();
         setTimeout(() => {
             updateContent();
             dom.bottomSheetContent.style.opacity = '1';
@@ -109,12 +157,24 @@ export function showBottomSheetForSegment(segment: HTMLElement) {
         }, 100);
     } else {
         updateContent();
+        // Set the size *before* showing the sheet.
+        setSheetSize();
+        // Add scroll lock to the body for mobile only
+        document.body.classList.add('overflow-hidden', 'md:overflow-auto');
         dom.bottomSheet.classList.remove('translate-y-full');
+        dom.bottomSheetOverlay.classList.remove('opacity-0', 'invisible');
         isSheetOpen = true;
     }
 }
 
-/** Sets up event listeners for the bottom sheet's close button. */
+/** Sets up event listeners for the bottom sheet's close button and overlay. */
 export function initializeBottomSheet() {
     dom.bottomSheetCloseButton.addEventListener('click', hideBottomSheet);
+    dom.bottomSheetOverlay.addEventListener('click', hideBottomSheet);
+    // Also recalculate size on resize events, but only if the sheet is open.
+    window.addEventListener('resize', () => {
+        if (isSheetOpen) {
+            setSheetSize();
+        }
+    });
 }

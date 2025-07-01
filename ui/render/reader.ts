@@ -1,8 +1,7 @@
 // ui/render/reader.ts
 import * as dom from '../../dom.ts';
 import * as state from '../../state.ts';
-import { speakText } from '../../services/tts.ts';
-import { getCategoryClass, createPitchAccentVisualizer, createFuriganaHTML } from '../components.ts';
+import { createAnalysisHeaderComponent, createGrammarNotesComponent } from '../components.ts';
 
 /** Renders input text into the reader view, preserving paragraphs and coloring analyzed sentences. */
 export function renderReaderView(entry: state.TextEntry) {
@@ -66,7 +65,7 @@ export function renderReaderView(entry: state.TextEntry) {
     viewContainer.appendChild(header);
     
     const textContainer = document.createElement('div');
-    textContainer.className = 'bg-surface-soft border border-border rounded-lg p-4 sm:p-6 max-h-80 overflow-y-auto';
+    textContainer.className = 'bg-surface-soft border border-border rounded-lg p-4 sm:p-6 max-h-80 overflow-y-auto no-scrollbar';
     
     paragraphs.forEach(sentences => {
         const paragraphBlock = document.createElement('p');
@@ -102,22 +101,21 @@ export function renderReaderView(entry: state.TextEntry) {
     viewContainer.appendChild(textContainer);
 }
 
-/** Renders the focused reading mode UI. */
-export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: number, analysisData: any) {
-    dom.readingModeView.innerHTML = ''; // Clear previous content
-    dom.readingModeView.className = ''; // Remove old layout classes
+/**
+ * Creates the common UI shell for the reading mode (header, nav, etc.).
+ * @param sentenceIndex The index of the current sentence.
+ * @param totalSentences The total number of sentences.
+ * @param options Configuration for the shell, e.g., if controls should be enabled.
+ * @returns An object containing the root element and containers for content.
+ */
+function createReadingModeShell(sentenceIndex: number, totalSentences: number, options: {isLoaded: boolean}) {
+    dom.readingModeView.innerHTML = '';
+    dom.readingModeView.className = '';
 
-    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
-    const totalSentences = sentences.length;
-    const segmentElements: HTMLElement[] = [];
-
-    // 1. Main Fixed Header (contains controls and interactive sentence)
     const fixedHeader = document.createElement('header');
     fixedHeader.id = 'reading-mode-header';
     fixedHeader.className = 'fixed top-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-md shadow-sm header-collapsed';
-    dom.readingModeView.appendChild(fixedHeader);
 
-    // New hover trigger for desktop
     const hoverTrigger = document.createElement('div');
     hoverTrigger.id = 'reading-header-hover-trigger';
     hoverTrigger.className = 'hidden md:block absolute top-0 left-0 right-0 h-4 z-20';
@@ -128,12 +126,10 @@ export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: num
     headerContentWrapper.className = 'max-w-4xl mx-auto p-2 space-y-2';
     fixedHeader.appendChild(headerContentWrapper);
 
-    // Wrapper for collapsible nav
     const navWrapper = document.createElement('div');
     navWrapper.id = 'reading-mode-nav-wrapper';
     headerContentWrapper.appendChild(navWrapper);
-    
-    // 1a. Navigation controls (now inside the wrapper)
+
     const navControls = document.createElement('div');
     navControls.className = 'flex justify-between items-center';
     navControls.innerHTML = `
@@ -150,163 +146,74 @@ export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: num
             <button id="reading-nav-prev" title="Previous Sentence (←)" class="p-2 rounded-full hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed" ${sentenceIndex === 0 ? 'disabled' : ''}>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <button id="reading-nav-next" title="Next Sentence (→)" class="p-2 rounded-full hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed" ${sentenceIndex >= totalSentences - 1 ? 'disabled' : ''}>
+            <button id="reading-nav-next" title="Next Sentence (→)" class="p-2 rounded-full hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed" ${!options.isLoaded || sentenceIndex >= totalSentences - 1 ? 'disabled' : ''}>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
             </button>
         </div>
     `;
     navWrapper.appendChild(navControls);
 
-    // 1b. Interactive sentence (the always-visible part)
-    const sentenceWrapper = document.createElement('div');
-    sentenceWrapper.className = 'relative p-3 bg-surface-soft rounded-lg max-h-[50vh] overflow-y-auto';
-    headerContentWrapper.appendChild(sentenceWrapper);
+    const scrollableContent = document.createElement('main');
+    scrollableContent.id = 'reading-mode-content-wrapper';
+    
+    // Set padding on scrollable content to avoid being obscured by the fixed header
+    const setPadding = () => {
+        const headerHeight = fixedHeader.offsetHeight - 30;
+        // Check current padding to avoid unnecessary style changes which can trigger reflow
+        if (headerHeight > 0 && scrollableContent.style.paddingTop !== `${headerHeight}px`) {
+          scrollableContent.style.paddingTop = `${headerHeight}px`;
+        }
+    };
+    
+    // Observe changes to the header size (e.g., mobile nav toggle) and adjust padding
+    const resizeObserver = new ResizeObserver(() => {
+        // Use requestAnimationFrame to prevent layout thrashing
+        requestAnimationFrame(setPadding);
+    });
+    resizeObserver.observe(fixedHeader);
+    
+    // Append to the main view element
+    dom.readingModeView.append(fixedHeader, scrollableContent);
+    
+    // Call setPadding after elements are in the DOM to get correct height.
+    // Use rAF for better timing. Call it twice to handle potential double reflows on complex loads.
+    requestAnimationFrame(() => {
+        setPadding();
+        requestAnimationFrame(setPadding);
+    });
 
+    return { headerContentWrapper, scrollableContent };
+}
+
+/** Renders the focused reading mode UI. */
+export function renderReadingModeView(entry: state.TextEntry, sentenceIndex: number, analysisData: any) {
+    const sentences = entry.text.split('\n').flatMap(p => p.match(/[^。？！]+(?:[。？！][」』]*)?/g)?.filter(s => s?.trim()) || []);
+    const totalSentences = sentences.length;
+    const segmentElements: HTMLElement[] = [];
+
+    const { headerContentWrapper, scrollableContent } = createReadingModeShell(sentenceIndex, totalSentences, { isLoaded: true });
+
+    // Interactive sentence header
     const toggleButton = document.createElement('button');
     toggleButton.id = 'reading-header-toggle';
     toggleButton.title = 'Toggle navigation controls';
-    toggleButton.className = 'md:hidden absolute top-2 right-2 z-10 p-2 rounded-full bg-surface/50 hover:bg-surface-hover transition-colors';
+    toggleButton.className = 'md:hidden z-10 p-2 rounded-full bg-surface/50 hover:bg-surface-hover transition-colors';
     toggleButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>`;
-    sentenceWrapper.appendChild(toggleButton);
 
-    const sentenceContainer = document.createElement('div');
-    sentenceContainer.className = 'flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xl font-medium font-japanese pr-12';
-    sentenceWrapper.appendChild(sentenceContainer);
-    
-    analysisData.analysis.forEach((segment: any) => {
-        const segmentEl = document.createElement('span');
-        segmentEl.className = `segment relative inline-block rounded-md px-2 py-1 cursor-pointer transition-transform duration-200 hover:-translate-y-0.5 leading-loose ${getCategoryClass(segment.category)}`;
-        segmentEl.dataset.japaneseSegment = segment.japanese_segment;
-        segmentEl.dataset.reading = segment.reading;
-        segmentEl.dataset.english = segment.english_equivalent;
-        segmentEl.dataset.category = segment.category;
-        segmentEl.dataset.wordUrl = `https://jisho.org/search/${encodeURIComponent(segment.japanese_segment)}`;
-        
-        if (segment.category !== 'PUNCTUATION') {
-            const pitchVisualizer = createPitchAccentVisualizer(segment.reading, segment.pitch_accent);
-            if (pitchVisualizer) segmentEl.appendChild(pitchVisualizer);
-        }
-
-        const contentWrapper = document.createElement('div');
-        contentWrapper.innerHTML = createFuriganaHTML(segment.japanese_segment, segment.reading, true);
-        segmentEl.appendChild(contentWrapper);
-        
-        sentenceContainer.appendChild(segmentEl);
-        segmentElements.push(segmentEl);
+    const analysisHeader = createAnalysisHeaderComponent(analysisData, segmentElements, {
+      wrapperClasses: ['p-3', 'min-h-48'],
+      sentenceContainerClasses: ['text-xl', 'font-medium', 'font-japanese', 'pr-12'],
+      extraControls: [toggleButton]
     });
-
-    const sentenceControls = document.createElement('div');
-    sentenceControls.className = 'absolute top-12 right-2 z-10 flex flex-col gap-1.5';
-    sentenceWrapper.appendChild(sentenceControls);
+    headerContentWrapper.appendChild(analysisHeader);
     
-    const reanalyzeButton = document.createElement('button');
-    reanalyzeButton.id = 're-analyze-button';
-    reanalyzeButton.className = 'inline-flex items-center justify-center w-8 h-8 rounded-full bg-surface/50 text-accent hover:bg-accent-subtle-bg transition';
-    reanalyzeButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.691V6.168" /></svg>`;
-    reanalyzeButton.title = 'Re-analyze sentence';
-    sentenceControls.appendChild(reanalyzeButton);
-
-    const translationToggleButton = document.createElement('button');
-    translationToggleButton.id = 'toggle-translation-button';
-    translationToggleButton.className = 'inline-flex items-center justify-center w-8 h-8 rounded-full bg-surface/50 text-accent hover:bg-accent-subtle-bg transition align-middle';
-    translationToggleButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.108m-4.287 5.575a48.567 48.567 0 01-2.536-4.488M6.375 11.25a48.567 48.567 0 01-2.536-4.488" /></svg>`;
-    translationToggleButton.title = 'Toggle Translation (T)';
-    translationToggleButton.setAttribute('aria-pressed', 'false');
-    sentenceControls.appendChild(translationToggleButton);
-
-    const ttsButton = document.createElement('button');
-    ttsButton.className = 'tts-button inline-flex items-center justify-center w-8 h-8 rounded-full bg-surface/50 text-accent hover:bg-accent-subtle-bg transition';
-    ttsButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"></path></svg>`;
-    ttsButton.title = 'Read sentence aloud (S)';
-    ttsButton.onclick = (e) => { e.preventDefault(); speakText(analysisData.original_japanese_sentence); };
-    sentenceControls.appendChild(ttsButton);
-
-    // Add translation content (hidden by default)
-    if (analysisData.english_translation) {
-      const translationContent = document.createElement('div');
-      translationContent.id = 'sentence-translation-content';
-      translationContent.className = 'hidden mt-2 pt-2 border-t border-dashed border-border-subtle text-base italic text-text-secondary';
-      translationContent.innerHTML = `<p>${analysisData.english_translation}</p>`;
-      sentenceWrapper.appendChild(translationContent);
-    }
-    
-    // 2. Scrollable content area
-    const scrollableContent = document.createElement('main');
-    scrollableContent.id = 'reading-mode-content-wrapper';
-    dom.readingModeView.appendChild(scrollableContent);
-
+    // Scrollable content (grammar notes)
     const innerScrollable = document.createElement('div');
     innerScrollable.className = 'max-w-4xl mx-auto p-2 md:p-4';
     scrollableContent.appendChild(innerScrollable);
 
-    // 3. Populate scrollable content (grammar notes)
-    if (analysisData.grammar_patterns?.length > 0) {
-        const notesContainer = document.createElement('div');
-        const notesList = document.createElement('ul');
-        notesList.className = 'flex flex-col gap-3';
-
-        const segmentPatterns = new Map<number, any[]>();
-
-        analysisData.grammar_patterns.forEach((pattern: any, i: number) => {
-            const colorIndex = i % 12;
-            const idClass = `pattern-${colorIndex}`;
-            const patternInfo = { name: pattern.pattern_name, explanation: pattern.explanation, idClass, colorIndex };
-
-            pattern.constituent_indices?.forEach((index: number) => {
-                if (!segmentPatterns.has(index)) segmentPatterns.set(index, []);
-                segmentPatterns.get(index)!.push(patternInfo);
-            });
-
-            const listItem = document.createElement('li');
-            listItem.className = 'flex gap-4 p-4 rounded-lg bg-surface-subtle cursor-pointer transition-all duration-200';
-            listItem.dataset.patternId = idClass;
-            listItem.innerHTML = `
-                <span class="flex-shrink-0 w-1.5 rounded-full bg-pattern-${colorIndex}"></span>
-                <div class="flex-grow">
-                    <strong class="font-semibold text-accent">${pattern.pattern_name}</strong>
-                    <p class="text-sm text-text-muted mt-1">${pattern.explanation}</p>
-                    <button class="show-examples-button mt-3 text-xs font-semibold px-2 py-1 rounded-md border border-accent text-accent hover:bg-accent hover:text-primary-text transition inline-flex items-center gap-2 disabled:opacity-50" data-pattern-name="${pattern.pattern_name}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" /></svg>
-                        <span class="button-text">Examples</span>
-                    </button>
-                </div>`;
-            notesList.appendChild(listItem);
-        });
-
-        segmentPatterns.forEach((patterns, index) => {
-            const el = segmentElements[index];
-            if (el && patterns.length > 0) {
-                el.dataset.patterns = JSON.stringify(patterns.map(({name, explanation, idClass}) => ({name, explanation, idClass})));
-                const lineThickness = 2;
-                const lineGap = 3;
-                el.style.paddingBottom = `${4 + (patterns.length * lineThickness) + ((patterns.length - 1) * lineGap)}px`;
-                const backgrounds = patterns.map(p => `linear-gradient(to top, rgb(var(--color-${p.idClass}-rgb)) 0%, rgb(var(--color-${p.idClass}-rgb)) 100%)`);
-                el.style.backgroundImage = backgrounds.join(', ');
-                el.style.backgroundSize = patterns.map(() => `100% ${lineThickness}px`).join(', ');
-                el.style.backgroundPosition = patterns.map((_, i) => `0 calc(100% - ${i * (lineThickness + lineGap)}px)`).join(', ');
-                el.style.backgroundRepeat = 'no-repeat';
-                el.classList.add('grammar-pattern', ...patterns.map(p => p.idClass));
-            }
-        });
-
-        notesContainer.appendChild(notesList);
-        const hint = document.createElement('p');
-        hint.className = 'text-xs text-center text-text-muted mt-4 px-4';
-        hint.innerHTML = 'Tip: Use <kbd class="font-sans border rounded px-1.5 py-0.5 border-strong">J</kbd>/<kbd class="font-sans border rounded px-1.5 py-0.5 border-strong">K</kbd> to navigate patterns, <kbd class="font-sans border rounded px-1.5 py-0.5 border-strong">E</kbd> for examples, and <kbd class="font-sans border rounded px-1.5 py-0.5 border-strong">Esc</kbd> to clear focus.';
-        notesContainer.appendChild(hint);
-        innerScrollable.appendChild(notesContainer);
-    }
-
-    // 4. Set padding on scrollable content to avoid being obscured by the fixed header
-    const setPadding = () => {
-        const headerHeight = fixedHeader.offsetHeight;
-        if (headerHeight > 0) {
-          scrollableContent.style.paddingTop = `${headerHeight}px`;
-        }
-    };
-    const resizeObserver = new ResizeObserver(setPadding);
-    resizeObserver.observe(fixedHeader);
-    setPadding(); // Initial call
+    const grammarNotes = createGrammarNotesComponent(analysisData, segmentElements);
+    innerScrollable.appendChild(grammarNotes);
 }
 
 /** Renders a loading state for the reading mode, including sentence preview. */
@@ -315,58 +222,11 @@ export function renderReadingModeLoading(entry: state.TextEntry, sentenceIndex: 
     const sentence = sentences[sentenceIndex];
     const totalSentences = sentences.length;
 
-    dom.readingModeView.innerHTML = '';
-    dom.readingModeView.className = '';
+    const { headerContentWrapper, scrollableContent } = createReadingModeShell(sentenceIndex, totalSentences, { isLoaded: false });
 
-    // 1. Fixed Header
-    const fixedHeader = document.createElement('header');
-    fixedHeader.id = 'reading-mode-header';
-    fixedHeader.className = 'fixed top-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-md shadow-sm header-collapsed';
-    dom.readingModeView.appendChild(fixedHeader);
-
-    // New hover trigger for desktop
-    const hoverTrigger = document.createElement('div');
-    hoverTrigger.id = 'reading-header-hover-trigger';
-    hoverTrigger.className = 'hidden md:block absolute top-0 left-0 right-0 h-4 z-20';
-    fixedHeader.appendChild(hoverTrigger);
-
-    const headerContentWrapper = document.createElement('div');
-    headerContentWrapper.id = 'reading-mode-content-container';
-    headerContentWrapper.className = 'max-w-4xl mx-auto p-2 space-y-2';
-    fixedHeader.appendChild(headerContentWrapper);
-    
-    // Wrapper for collapsible nav
-    const navWrapper = document.createElement('div');
-    navWrapper.id = 'reading-mode-nav-wrapper';
-    headerContentWrapper.appendChild(navWrapper);
-
-    // 1a. Navigation controls (now inside wrapper, Next button disabled during load)
-    const navControls = document.createElement('div');
-    navControls.className = 'flex justify-between items-center';
-    navControls.innerHTML = `
-        <button id="reading-mode-exit" title="Exit Reading Mode" class="p-2 rounded-full hover:bg-surface-hover transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </button>
-        <div class="font-medium text-text-secondary flex items-center gap-1">
-            <input type="number" id="reading-mode-sentence-input" value="${sentenceIndex + 1}" min="1" max="${totalSentences}" title="Enter sentence number and press Enter" class="w-12 text-center bg-surface-subtle rounded-md p-1 focus:ring-2 focus:ring-focus-ring focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-            <span>/ ${totalSentences}</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <button id="reading-nav-prev" title="Previous Sentence (←)" class="p-2 rounded-full hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed" ${sentenceIndex === 0 ? 'disabled' : ''}>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <button id="reading-nav-next" title="Next Sentence (→)" class="p-2 rounded-full hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-            </button>
-        </div>
-    `;
-    navWrapper.appendChild(navControls);
-
-    // 1b. Placeholder for sentence
+    // Placeholder for sentence
     const sentenceWrapper = document.createElement('div');
-    sentenceWrapper.className = 'relative p-3 bg-surface-soft rounded-lg max-h-[50vh] overflow-y-auto';
+    sentenceWrapper.className = 'relative p-3 bg-surface-soft rounded-lg max-h-[50vh] overflow-y-auto no-scrollbar';
     headerContentWrapper.appendChild(sentenceWrapper);
 
     const toggleButton = document.createElement('button');
@@ -378,35 +238,15 @@ export function renderReadingModeLoading(entry: state.TextEntry, sentenceIndex: 
 
     const sentenceTextWrapper = document.createElement('div');
     sentenceTextWrapper.className = 'flex-grow flex items-center gap-4 text-xl font-medium font-japanese text-text-muted pr-10';
+    sentenceTextWrapper.innerHTML = `
+      <p class="flex-grow">${sentence}</p>
+      <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-accent flex-shrink-0"></div>
+    `;
     sentenceWrapper.appendChild(sentenceTextWrapper);
     
-    const sentenceText = document.createElement('p');
-    sentenceText.className = 'flex-grow';
-    sentenceText.textContent = sentence;
-
-    const spinner = document.createElement('div');
-    spinner.className = 'animate-spin rounded-full h-5 w-5 border-b-2 border-accent flex-shrink-0';
-    
-    sentenceTextWrapper.append(sentenceText, spinner);
-    
-    // 2. Scrollable content
-    const scrollableContent = document.createElement('main');
-    scrollableContent.id = 'reading-mode-content-wrapper';
-    dom.readingModeView.appendChild(scrollableContent);
-
+    // Loading message in scrollable area
     const innerScrollable = document.createElement('div');
     innerScrollable.className = 'max-w-4xl mx-auto p-6 text-center text-text-muted';
     innerScrollable.textContent = 'Fetching analysis and grammar notes...';
     scrollableContent.appendChild(innerScrollable);
-
-    // 3. Set padding dynamically
-    const setPadding = () => {
-        const headerHeight = fixedHeader.offsetHeight - 40;
-        if (headerHeight > 0) {
-            scrollableContent.style.paddingTop = `${headerHeight}px`;
-        }
-    };
-    const resizeObserver = new ResizeObserver(setPadding);
-    resizeObserver.observe(fixedHeader);
-    setPadding();
 }

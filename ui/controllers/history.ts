@@ -5,7 +5,7 @@ import { showConfirmationModal } from '../modal.ts';
 import { loadTextEntry } from '../actions.ts';
 import { resetToNewTextView } from '../view.ts';
 import { renderHistoryPanel } from '../render/history.ts';
-import { HISTORY_KEY } from '../handlers.ts';
+import { HISTORY_KEY, UNSAVED_TEXT_KEY, UNSAVED_TITLE_KEY } from '../../constants.ts';
 
 /** Saves history to localStorage. */
 export function saveHistory() {
@@ -74,8 +74,8 @@ function setupHistoryPanel() {
             case 'load':
                 hidePanel();
                 // Clear unsaved text when loading from history to avoid confusion
-                localStorage.removeItem('japanese-analyzer-unsaved-title');
-                localStorage.removeItem('japanese-analyzer-unsaved-text');
+                localStorage.removeItem(UNSAVED_TITLE_KEY);
+                localStorage.removeItem(UNSAVED_TEXT_KEY);
                 loadTextEntry(entryId);
                 break;
             case 'delete':

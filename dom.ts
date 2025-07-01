@@ -1,4 +1,3 @@
-
 // dom.ts
 
 export const button = document.getElementById('generate-button') as HTMLButtonElement;
@@ -52,11 +51,24 @@ export const modalCancelButton = document.getElementById('modal-cancel-button') 
 
 // Bottom sheet elements
 export const bottomSheet = document.getElementById('bottom-sheet') as HTMLDivElement;
+export const bottomSheetOverlay = document.getElementById('bottom-sheet-overlay') as HTMLDivElement;
 export const bottomSheetTitle = document.getElementById('bottom-sheet-title') as HTMLHeadingElement;
 export const bottomSheetContent = document.getElementById('bottom-sheet-content') as HTMLDivElement;
 export const bottomSheetCloseButton = document.getElementById('bottom-sheet-close-button') as HTMLButtonElement;
 
+// A simple check to ensure all critical elements are found at startup.
+const elements = [
+  button, sentenceInput, textTitleInput, resultContainer, inputArea, mainView,
+  readerView, analysisView, readingModeView, themeCheckbox, furiganaCheckbox,
+  colorCodingCheckbox, pitchAccentCheckbox, tooltip, settingsButton, settingsMenu,
+  analysisDepthSlider, analysisDepthLabel, fontSizeSlider, fontSizeLabel, appHeader,
+  newTextButton, historyButton, historyPanel, historyPanelOverlay, closeHistoryButton,
+  clearHistoryButton, historyList, historyEmptyMessage, exportDataButton,
+  importDataButton, importFileInput, apiKeyInput, saveApiKeyButton, apiKeyStatus,
+  modalOverlay, modalBox, modalMessage, modalConfirmButton, modalCancelButton,
+  bottomSheet, bottomSheetOverlay, bottomSheetTitle, bottomSheetContent, bottomSheetCloseButton,
+];
 
-if (!button || !sentenceInput || !textTitleInput || !resultContainer || !inputArea || !mainView || !readerView || !analysisView || !readingModeView || !themeCheckbox || !furiganaCheckbox || !colorCodingCheckbox || !pitchAccentCheckbox || !tooltip || !settingsButton || !settingsMenu || !newTextButton || !historyButton || !historyPanel || !closeHistoryButton || !clearHistoryButton || !historyList || !historyEmptyMessage || !historyPanelOverlay || !analysisDepthSlider || !analysisDepthLabel || !fontSizeSlider || !fontSizeLabel || !exportDataButton || !importDataButton || !importFileInput || !apiKeyInput || !saveApiKeyButton || !apiKeyStatus || !modalOverlay || !modalBox || !modalMessage || !modalConfirmButton || !modalCancelButton || !appHeader || !bottomSheet || !bottomSheetTitle || !bottomSheetContent || !bottomSheetCloseButton) {
-  throw new Error('Required HTML elements not found at startup.');
+if (elements.some(el => !el)) {
+    throw new Error('A required HTML element was not found in the DOM.');
 }

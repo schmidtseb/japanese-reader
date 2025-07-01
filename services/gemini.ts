@@ -1,4 +1,3 @@
-
 // services/gemini.ts
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { getSystemPrompt, getExampleSentenceSystemPrompt } from '../prompt.ts';
@@ -65,6 +64,30 @@ async function withRetry<T>(apiCall: () => Promise<T>, maxRetries = 3, initialDe
     }
 }
 
+/**
+ * Extracts and cleans the JSON string from a Gemini API response.
+ * @param response The response object from the API.
+ * @returns A clean JSON string, with markdown fences removed.
+ * @throws An error if the response is empty or invalid.
+ */
+function getJsonStringFromResponse(response: GenerateContentResponse): string {
+    const text = response.text;
+    if (typeof text !== 'string' || text.trim() === '') {
+        console.error("Gemini API returned an empty or invalid text response.", response);
+        const candidate = response.candidates?.[0];
+        if (candidate && candidate.finishReason !== 'STOP') {
+            const safetyReason = `The response may have been blocked. Reason: ${candidate.finishReason}.`;
+            throw new Error(`The AI model's response was incomplete. ${safetyReason}`);
+        }
+        throw new Error("The AI model returned an empty response. This might be due to a content filter or an internal issue.");
+    }
+
+    const fenceRegex = /^```(?:json)?\s*\n?(.*?)\n?\s*```$/s;
+    const match = text.trim().match(fenceRegex);
+    return match ? match[1].trim() : text.trim();
+}
+
+
 /** Analyzes a single sentence via the API. */
 export async function analyzeSentence(apiKey: string, sentence: string, depth: AnalysisDepth): Promise<any> {
     const apiCall = async () => {
@@ -83,20 +106,9 @@ export async function analyzeSentence(apiKey: string, sentence: string, depth: A
             },
         });
 
-        const response = await withTimeout(modelPromise, 30000) as GenerateContentResponse; // 30 second timeout
+        const response = await withTimeout(modelPromise, 30000); // 30 second timeout
+        const jsonStr = getJsonStringFromResponse(response);
 
-        const aggregatedResponse = response.text;
-        if (typeof aggregatedResponse !== 'string' || aggregatedResponse.trim() === '') {
-            console.error("Gemini API returned an empty or invalid text response.", response);
-            const candidate = response.candidates?.[0];
-            if (candidate && candidate.finishReason !== 'STOP') {
-                const safetyReason = `The response may have been blocked. Reason: ${candidate.finishReason}.`;
-                throw new Error(`The AI model's response was incomplete. ${safetyReason}`);
-            }
-            throw new Error("The AI model returned an empty response. This might be due to a content filter or an internal issue.");
-        }
-        
-        const jsonStr = aggregatedResponse.trim().match(/^```(?:json)?\s*\n?(.*?)\n?\s*```$/s)?.[1] || aggregatedResponse.trim();
         try {
             const parsedData = JSON.parse(jsonStr);
             return Array.isArray(parsedData) ? parsedData[0] : parsedData;
@@ -128,20 +140,9 @@ export async function getExampleSentences(apiKey: string, patternName: string): 
             },
         });
 
-        const response = await withTimeout(modelPromise, 20000) as GenerateContentResponse; // 20s for examples
-
-        const textResponse = response.text;
-        if (typeof textResponse !== 'string' || textResponse.trim() === '') {
-            console.error(`Gemini API returned an empty or invalid text response for pattern "${patternName}".`, response);
-            const candidate = response.candidates?.[0];
-            if (candidate && candidate.finishReason !== 'STOP') {
-                const safetyReason = `The response may have been blocked. Reason: ${candidate.finishReason}.`;
-                throw new Error(`Could not generate examples for ${patternName}. ${safetyReason}`);
-            }
-            throw new Error(`The AI model returned an empty response for pattern "${patternName}".`);
-        }
+        const response = await withTimeout(modelPromise, 20000); // 20s for examples
+        const jsonStr = getJsonStringFromResponse(response);
         
-        let jsonStr = textResponse.trim().match(/^```(?:json)?\s*\n?(.*?)\n?\s*```$/s)?.[1] || textResponse.trim();
         try {
             return JSON.parse(jsonStr);
         } catch(e) {
