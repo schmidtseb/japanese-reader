@@ -7,9 +7,9 @@ import {
     AppDataProvider, 
     SettingsProvider, 
     UIProvider, 
-} from './src/contexts/index.ts';
-import { ModalProvider } from './src/components/Modal.tsx';
-import App from './src/App.tsx';
+} from './contexts/index.ts';
+import { ModalProvider } from './components/Modal.tsx';
+import App from './App.tsx';
 
 function Main() {
   return (
