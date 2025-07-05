@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { 
     useAppData, 
+    useSettings,
     useUI,
     View 
 } from './contexts/index.ts';
@@ -75,7 +76,7 @@ function Header() {
             )}
           </button>
         </div>
-        <div className="relative">
+        <div>
           <button title="Settings" className="btn-ghost" onClick={() => setIsSettingsOpen(prev => !prev)}>
             <i className="bi bi-gear text-xl"></i>
           </button>
@@ -87,7 +88,8 @@ function Header() {
 }
 
 export default function App() {
-  const { state } = useAppData();
+  const { state: appDataState } = useAppData();
+  const { state: settingsState } = useSettings();
   
   useHotkeys();
 
@@ -95,8 +97,19 @@ export default function App() {
     loadSpeechSynthesisVoices();
   }, []);
 
+  if (appDataState.isLoading || settingsState.isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-background">
+        <div className="text-center">
+            <i className="bi bi-arrow-repeat text-4xl text-text-muted animate-spin"></i>
+            <p className="mt-4 text-text-muted">Loading application data...</p>
+        </div>
+      </div>
+    );
+  }
+
   const renderView = () => {
-    switch (state.view) {
+    switch (appDataState.view) {
       case View.Editor:
         return <EditorView />;
       case View.Reader:
@@ -110,12 +123,12 @@ export default function App() {
     }
   };
 
-  const isReadingMode = state.view === View.ReadingMode;
+  const isReadingMode = appDataState.view === View.ReadingMode;
 
   return (
     <div className={`w-full h-full flex flex-col ${isReadingMode ? '' : 'md:container md:mx-auto md:px-4 md:py-6'}`}>
       <main id="app" className={`bg-surface w-full flex-grow flex flex-col min-h-0 ${isReadingMode ? '' : 'md:rounded-2xl md:shadow-xl md:border border-border md:overflow-hidden'}`}>
-        {state.view !== View.ReadingMode && <Header />}
+        {appDataState.view !== View.ReadingMode && <Header />}
         {renderView()}
       </main>
       <HistoryPanel />

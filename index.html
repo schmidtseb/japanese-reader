@@ -387,15 +387,6 @@
   }
 }
 </script>
-  <script>
-      // Apply theme from localStorage immediately to prevent FOUC
-      (function () {
-        const theme = localStorage.getItem('theme') || 'light';
-        if (theme === 'dark') {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-  </script>
   <style type="text/tailwindcss">
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
     

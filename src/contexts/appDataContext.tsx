@@ -1,12 +1,7 @@
 // contexts/appDataContext.tsx
 import React, { createContext, useReducer, useContext, useEffect, Dispatch } from 'react';
-import { 
-    HISTORY_KEY, 
-    REVIEW_DECK_KEY, 
-    UNSAVED_TEXT_KEY,
-    UNSAVED_TITLE_KEY,
-} from '../utils/constants.ts';
 import { AnalysisDepth } from './settingsContext.tsx';
+import * as db from '../services/db.ts';
 
 // --- TYPE DEFINITIONS ---
 export interface TextEntry {
@@ -40,6 +35,7 @@ export enum View {
 }
 
 export interface AppDataState {
+    isLoading: boolean;
     view: View;
     currentTextEntryId: string | null;
     editingEntryId: string | null;
@@ -48,27 +44,10 @@ export interface AppDataState {
     reviewDeck: ReviewItem[];
 }
 
-// --- PERSISTENCE HELPERS ---
-const saveHistory = (history: TextEntry[]) => {
-    try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    } catch (e) {
-        console.error("Failed to save history to localStorage", e);
-    }
-};
-
-const saveReviewDeck = (deck: ReviewItem[]) => {
-    try {
-        deck.sort((a, b) => a.addedAt - b.addedAt);
-        localStorage.setItem(REVIEW_DECK_KEY, JSON.stringify(deck));
-    } catch (e) {
-        console.error("Failed to save review deck to localStorage", e);
-    }
-};
-
 // --- ACTIONS ---
 export type AppDataAction =
-  | { type: 'INITIALIZE_DATA'; payload: { history: TextEntry[], reviewDeck: ReviewItem[] } }
+  | { type: 'INITIALIZE_DATA_SUCCESS'; payload: { history: TextEntry[], reviewDeck: ReviewItem[] } }
+  | { type: 'INITIALIZE_DATA_FAILURE' }
   | { type: 'SET_VIEW'; payload: View }
   | { type: 'START_EDITING'; payload: string }
   | { type: 'SET_CURRENT_TEXT_ENTRY_ID'; payload: string | null }
@@ -88,6 +67,7 @@ export type AppDataAction =
 
 // --- INITIAL STATE ---
 const initialState: AppDataState = {
+    isLoading: true,
     view: View.Editor,
     currentTextEntryId: null,
     editingEntryId: null,
@@ -100,8 +80,11 @@ const initialState: AppDataState = {
 // --- REDUCER ---
 const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataState => {
     switch (action.type) {
-        case 'INITIALIZE_DATA':
-            return { ...state, ...action.payload };
+        case 'INITIALIZE_DATA_SUCCESS':
+            return { ...state, isLoading: false, ...action.payload };
+        
+        case 'INITIALIZE_DATA_FAILURE':
+            return { ...state, isLoading: false };
         
         case 'SET_VIEW':
             return { ...state, view: action.payload, selectedSentence: null };
@@ -115,9 +98,9 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
                 selectedSentence: null,
             };
 
-        case 'RESET_VIEW':
-            localStorage.removeItem(UNSAVED_TITLE_KEY);
-            localStorage.removeItem(UNSAVED_TEXT_KEY);
+        case 'RESET_VIEW': {
+            db.setTransientState('unsaved-title', '');
+            db.setTransientState('unsaved-text', '');
             return {
                 ...state,
                 view: View.Editor,
@@ -125,6 +108,7 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
                 selectedSentence: null,
                 editingEntryId: null,
             }
+        }
 
         case 'SET_CURRENT_TEXT_ENTRY_ID':
             return { ...state, currentTextEntryId: action.payload, selectedSentence: null };
@@ -132,12 +116,17 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
         case 'SET_SELECTED_SENTENCE':
             return { ...state, selectedSentence: action.payload };
 
-        case 'SET_HISTORY':
-             saveHistory(action.payload);
-             return { ...state, history: action.payload };
+        case 'SET_HISTORY': {
+            const newHistory = action.payload;
+            db.clearTextEntries().then(() => {
+                newHistory.forEach(entry => db.addOrUpdateTextEntry(entry));
+            });
+            return { ...state, history: newHistory };
+        }
         
         case 'ADD_OR_UPDATE_TEXT_ENTRY': {
             const newEntry = action.payload;
+            db.addOrUpdateTextEntry(newEntry);
             const existingIndex = state.history.findIndex(e => e.id === newEntry.id);
             let newHistory;
             if (existingIndex > -1) {
@@ -147,14 +136,14 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
                 newHistory = [newEntry, ...state.history];
             }
             newHistory.sort((a, b) => b.updatedAt - a.updatedAt);
-            saveHistory(newHistory);
             return { ...state, history: newHistory, editingEntryId: null };
         }
 
         case 'REMOVE_TEXT_ENTRY': {
-            const newHistory = state.history.filter(e => e.id !== action.payload);
-            saveHistory(newHistory);
-            const isDeletingCurrent = state.currentTextEntryId === action.payload;
+            const entryId = action.payload;
+            db.deleteTextEntry(entryId);
+            const newHistory = state.history.filter(e => e.id !== entryId);
+            const isDeletingCurrent = state.currentTextEntryId === entryId;
             return { 
                 ...state, 
                 history: newHistory,
@@ -165,16 +154,21 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
         }
         
         case 'CLEAR_HISTORY': {
-            saveHistory([]);
+            db.clearTextEntries();
             return { ...state, history: [], currentTextEntryId: null, view: View.Editor, selectedSentence: null };
         }
 
-        case 'SET_REVIEW_DECK':
-             saveReviewDeck(action.payload);
-             return { ...state, reviewDeck: action.payload };
+        case 'SET_REVIEW_DECK': {
+            const newDeck = action.payload;
+             db.clearReviewDeck().then(() => {
+                newDeck.forEach(item => db.addOrUpdateReviewItem(item));
+            });
+             return { ...state, reviewDeck: newDeck };
+        }
         
         case 'ADD_OR_UPDATE_REVIEW_ITEM': {
             const newItem = action.payload;
+            db.addOrUpdateReviewItem(newItem);
             const existingIndex = state.reviewDeck.findIndex(i => i.id === newItem.id);
             let newDeck;
             if (existingIndex > -1) {
@@ -183,13 +177,14 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
             } else {
                 newDeck = [...state.reviewDeck, newItem];
             }
-            saveReviewDeck(newDeck);
+            newDeck.sort((a, b) => a.addedAt - b.addedAt);
             return { ...state, reviewDeck: newDeck };
         }
 
         case 'REMOVE_REVIEW_ITEM': {
-            const newDeck = state.reviewDeck.filter(item => item.id !== action.payload);
-            saveReviewDeck(newDeck);
+            const itemId = action.payload;
+            db.deleteReviewItem(itemId);
+            const newDeck = state.reviewDeck.filter(item => item.id !== itemId);
             return { ...state, reviewDeck: newDeck };
         }
         
@@ -209,7 +204,7 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
             if (newProgress >= 0 && newProgress < sentences.length) {
                 entryToUpdate.readingProgress = newProgress;
                 historyCopy[entryIndex] = entryToUpdate;
-                saveHistory(historyCopy);
+                db.addOrUpdateTextEntry(entryToUpdate);
                 return { ...state, history: historyCopy };
             }
             
@@ -229,7 +224,7 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
             if (newProgress >= 0 && newProgress < sentences.length) {
                 entryToUpdate.readingProgress = newProgress;
                 historyCopy[entryIndex] = entryToUpdate;
-                saveHistory(historyCopy);
+                db.addOrUpdateTextEntry(entryToUpdate);
                 return { ...state, history: historyCopy };
             }
 
@@ -257,7 +252,7 @@ const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataStat
             const updatedEntry = { ...oldEntry, analyzedSentences: newAnalyzedSentences };
             historyCopy[entryIndex] = updatedEntry;
             
-            saveHistory(historyCopy);
+            db.addOrUpdateTextEntry(updatedEntry);
             return { ...state, history: historyCopy };
         }
 
@@ -276,35 +271,21 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     const [state, dispatch] = useReducer(appDataReducer, initialState);
 
     useEffect(() => {
-        try {
-            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-            let reviewDeckData = JSON.parse(localStorage.getItem(REVIEW_DECK_KEY) || '[]');
+        const loadData = async () => {
+            try {
+                const history = await db.getAllTextEntries();
+                const reviewDeck = await db.getAllReviewItems();
+                dispatch({ type: 'INITIALIZE_DATA_SUCCESS', payload: { history, reviewDeck } });
+            } catch (error) {
+                console.error("Failed to load app data from IndexedDB", error);
+                dispatch({ type: 'INITIALIZE_DATA_FAILURE' });
+            }
+        };
 
-            // Migration logic: check for old format and convert by resetting SRS progress
-            const migratedDeck = reviewDeckData.map((item: any) => {
-                // If item has 'easeFactor' or doesn't have 'srsStage', it's the old format.
-                if (item.hasOwnProperty('easeFactor') || !item.hasOwnProperty('srsStage')) {
-                    console.log(`Migrating item ${item.id} to new SRS format.`);
-                    const { id, type, content, textEntryId, addedAt } = item;
-                    // Reset progress for the new system
-                    return {
-                        id,
-                        type,
-                        content,
-                        textEntryId,
-                        addedAt,
-                        srsStage: 0,
-                        incorrectAnswerCount: 0,
-                        nextReviewDate: new Date().setHours(0, 0, 0, 0),
-                    };
-                }
-                return item;
-            });
-
-            dispatch({ type: 'INITIALIZE_DATA', payload: { history, reviewDeck: migratedDeck } });
-        } catch (error) {
-            console.error("Failed to load app data from localStorage", error);
-        }
+        db.initDB().then(loadData).catch(err => {
+            console.error("DB Init failed", err);
+            dispatch({ type: 'INITIALIZE_DATA_FAILURE' });
+        });
     }, []);
 
     return (

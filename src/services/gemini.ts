@@ -2,13 +2,13 @@ import { useState, useCallback } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { getSystemPrompt, getExampleSentenceSystemPrompt } from '../utils/prompts.ts';
 import { JAPANESE_ANALYSIS_SCHEMA, EXAMPLE_SENTENCES_SCHEMA } from '../utils/structured-output.ts';
-import { AnalysisDepth } from '../contexts/index.ts';
-import { USER_API_KEY } from '../utils/constants.ts';
+import { AnalysisDepth, Settings } from '../contexts/index.ts';
+import * as db from './db.ts';
 
-const getGenAI = () => {
+const getGenAI = async () => {
     // Priority: 1. User-provided key, 2. Environment variable key
-    const userApiKey = localStorage.getItem(USER_API_KEY);
-    const apiKey = userApiKey || process.env.API_KEY;
+    const settings = await db.getAllSettings();
+    const apiKey = settings.userApiKey || process.env.API_KEY;
 
     if (!apiKey) {
         throw new Error("API Key is not configured. Please set your key in the settings menu or ensure the default key is present.");
@@ -55,7 +55,7 @@ const useApiCall = <T, P extends any[]>(apiFn: (...args: P) => Promise<T>) => {
 };
 
 const analyzeSentenceApi = async (sentence: string, depth: AnalysisDepth, force = false) => {
-    const ai = getGenAI();
+    const ai = await getGenAI();
     const sanitizedSentence = sentence.trim().replace(/^[「『]/, '').replace(/[」』]$/, '').trim();
     if (!sanitizedSentence) {
         // Return mock analysis for empty/punctuation-only sentences
@@ -87,7 +87,7 @@ const analyzeSentenceApi = async (sentence: string, depth: AnalysisDepth, force 
 }
 
 const getExampleSentencesApi = async (patternName: string) => {
-    const ai = getGenAI();
+    const ai = await getGenAI();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-04-17',
         contents: patternName,

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-07-06
+
+### Changed
+-   **BREAKING CHANGE: Data Persistence Layer Overhaul**. The application's storage has been migrated from `localStorage` to `IndexedDB`.
+    -   **Reason**: To support larger amounts of user data (saved texts, review items) and provide a more robust and scalable storage solution than the 5-10MB limit of `localStorage`.
+    -   **Impact**: Data from previous versions of the app will **not** be automatically migrated. Users wishing to keep their data should use the "Export" feature in the old version before using the new version, and then use the "Import" feature.
+-   A new centralized `db.ts` service now manages all IndexedDB interactions, improving maintainability and separation of concerns.
+-   All application data, including settings and unsaved text in the editor, is now stored in IndexedDB.
+-   The application now shows a loading indicator on startup while asynchronously fetching data from the database.
+
+### Fixed
+-   The API key management is now more robust, with the key stored in IndexedDB as part of the settings.
+-   The settings menu now has a maximum height and scrolls internally, preventing the entire page from scrolling when the menu content is long. This also fixes an issue where the overlay backdrop would not cover the full screen.
+
 ## [2.0.0] - 2025-07-05
 
 This release marks a complete rewrite of the application in React and TypeScript, introducing a significantly more powerful and robust user experience.

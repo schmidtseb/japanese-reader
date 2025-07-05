@@ -12,7 +12,7 @@ This project is a feature-rich, client-side single-page application built with R
 -   **Integrated SRS**: Add words and grammar points to a review deck. A built-in Spaced Repetition System helps you practice and retain what you've learned.
 -   **Focused Reading Mode**: A distraction-free, sentence-by-sentence reading interface with swipe/tap navigation.
 -   **Customizable Experience**: Includes light and dark themes, adjustable font sizes, and toggles for UI elements like furigana and pitch accent.
--   **Local Persistence**: All your saved texts, analysis history, and review progress are saved securely in your browser's local storage.
+-   **Local Persistence**: All your saved texts, analysis history, and review progress are saved securely in your browser's IndexedDB.
 -   **Data Management**: Import and export your entire application data (history, settings, review deck) as a JSON file.
 
 ## 🚀 Getting Started
@@ -52,7 +52,7 @@ This application requires a Google Gemini API key to function. You have two opti
 
 1.  Run the application.
 2.  Open the settings menu (gear icon).
-3.  Under "API Key Management", paste your Gemini API key into the input field and click "Save Key". This key will override the default key and will be stored locally in your browser.
+3.  Under "API Key Management", paste your Gemini API key into the input field and click "Save Key". This key will override the default key and will be stored locally in your browser's database.
 
 ### Running the Application
 
@@ -70,4 +70,4 @@ Open your browser and navigate to the local URL provided (usually `http://localh
 -   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 -   **Build Tool**: [Vite](https://vitejs.dev/)
 -   **AI**: [Google Gemini API](https://ai.google.dev/) via `@google/genai` SDK
--   **Persistence**: Browser `localStorage`
+-   **Persistence**: Browser **IndexedDB**

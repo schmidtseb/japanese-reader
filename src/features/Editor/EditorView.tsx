@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAppData, View, TextEntry, useSettings } from '../../contexts/index.ts';
 import { useModal } from '../../components/Modal.tsx';
-import { UNSAVED_TITLE_KEY, UNSAVED_TEXT_KEY } from '../../utils/constants.ts';
+import * as db from '../../services/db.ts';
 import { AnalysisDepth } from '../../contexts/settingsContext.tsx';
+
+const UNSAVED_TITLE_KEY = 'unsaved-title';
+const UNSAVED_TEXT_KEY = 'unsaved-text';
 
 export function EditorView() {
     const { state, dispatch } = useAppData();
@@ -10,35 +13,39 @@ export function EditorView() {
     const { showAlert } = useModal();
     const [title, setTitle] = useState('');
     const [text, setText] = useState('');
+    const [isLoaded, setIsLoaded] = useState(false);
 
     const isApiKeySet = !!process.env.API_KEY || !!settingsState.userApiKey;
     const editingEntry = state.editingEntryId ? state.history.find(e => e.id === state.editingEntryId) : null;
 
-    // Load unsaved text from localStorage on mount or data from entry being edited
     useEffect(() => {
-        if (editingEntry) {
-            setTitle(editingEntry.title);
-            setText(editingEntry.text);
-        } else {
-            const savedTitle = localStorage.getItem(UNSAVED_TITLE_KEY) || '';
-            const savedText = localStorage.getItem(UNSAVED_TEXT_KEY) || '';
-            setTitle(savedTitle);
-            setText(savedText);
-        }
+        const loadInitialData = async () => {
+            if (editingEntry) {
+                setTitle(editingEntry.title);
+                setText(editingEntry.text);
+            } else {
+                const savedTitle = await db.getTransientState(UNSAVED_TITLE_KEY) || '';
+                const savedText = await db.getTransientState(UNSAVED_TEXT_KEY) || '';
+                setTitle(savedTitle);
+                setText(savedText);
+            }
+            setIsLoaded(true);
+        };
+        loadInitialData();
     }, [editingEntry]);
 
-    // Persist to localStorage on change only for new texts
+    // Persist to IndexedDB on change only for new texts
     useEffect(() => {
-        if (!editingEntry) {
-            localStorage.setItem(UNSAVED_TITLE_KEY, title);
+        if (isLoaded && !editingEntry) {
+            db.setTransientState(UNSAVED_TITLE_KEY, title);
         }
-    }, [title, editingEntry]);
+    }, [title, editingEntry, isLoaded]);
 
     useEffect(() => {
-        if (!editingEntry) {
-            localStorage.setItem(UNSAVED_TEXT_KEY, text);
+        if (isLoaded && !editingEntry) {
+            db.setTransientState(UNSAVED_TEXT_KEY, text);
         }
-    }, [text, editingEntry]);
+    }, [text, editingEntry, isLoaded]);
 
     const handleAnalyze = () => {
         if (!isApiKeySet) {
@@ -121,15 +128,23 @@ export function EditorView() {
                         onChange={(e) => setText(e.target.value)}
                     />
                 </div>
-                <button
-                    onClick={handleAnalyze}
-                    className="w-full btn-primary text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!text.trim() || !isApiKeySet}
-                    title={!isApiKeySet ? 'API Key not configured. Please add one in settings.' : ''}
-                >
-                    <i className="bi bi-search"></i>
-                    Analyze Text
-                </button>
+                <div>
+                    <button
+                        onClick={handleAnalyze}
+                        className="w-full btn-primary text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!text.trim() || !isApiKeySet}
+                        title={!isApiKeySet ? 'API Key not configured. Please add one in settings.' : ''}
+                    >
+                        <i className="bi bi-search"></i>
+                        Analyze Text
+                    </button>
+                    {!isApiKeySet && (
+                        <p className="text-center text-sm text-warning-text mt-3">
+                            <i className="bi bi-exclamation-triangle-fill mr-1 align-middle"></i>
+                            Please set your API key in settings to enable analysis.
+                        </p>
+                    )}
+                </div>
             </div>
         </div>
     );

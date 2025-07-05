@@ -114,12 +114,17 @@ export const ReadingModeView = () => {
 
         if (duration < 250 && Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
             const tapPosition = endX / window.innerWidth;
-            if (tapPosition < 0.25) {
-                handleNav('prev');
-            } else if (tapPosition > 0.75) {
-                handleNav('next');
+            if (isFloatingNavVisible) {
+                if (tapPosition < 0.25) {
+                    handleNav('prev');
+                } else if (tapPosition > 0.75) {
+                    handleNav('next');
+                } else {
+                    handleActivity(); // Tap in middle zone is activity.
+                }
             } else {
-                handleActivity(); // Tap in middle zone is activity.
+                // If nav is not visible, any tap is just an activity to show it.
+                handleActivity();
             }
             return;
         }

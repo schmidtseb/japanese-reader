@@ -1,5 +1,6 @@
 
 
+
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { useAppData, View } from '../../contexts/index.ts';
 import { useSentenceAnalysis } from '../../hooks/useSentenceAnalysis.ts';
@@ -48,9 +49,9 @@ export const ReaderView = () => {
     
     return (
         <div className="flex-grow min-h-0 overflow-y-auto md:grid md:grid-cols-2 md:overflow-hidden">
-            {/* Left Pane: Text Content. This entire pane will scroll on desktop. */}
-            <div className="p-6 flex flex-col min-h-0 md:h-full md:overflow-y-auto no-scrollbar">
-                <div className="flex justify-between items-center mb-4 flex-shrink-0">
+            {/* Left Pane: Text Content. Uses Grid on desktop for robust scrolling. */}
+            <div className="p-6 flex flex-col md:h-full md:grid md:grid-rows-[auto_1fr] md:gap-y-4">
+                <div className="flex justify-between items-center mb-4 md:mb-0">
                     <h2 className="text-xl font-bold text-text-primary truncate" title={currentEntry.title}>{currentEntry.title}</h2>
                     <div className="flex items-center gap-2">
                          <button onClick={handleEdit} title="Edit Text" className="btn-ghost">
@@ -61,7 +62,7 @@ export const ReaderView = () => {
                         </button>
                     </div>
                 </div>
-                <div id="reader-view-text-container" className="reader-view-text bg-surface-soft border border-border rounded-lg p-4 sm:p-6 flex-grow">
+                <div id="reader-view-text-container" className="reader-view-text bg-surface-soft border border-border rounded-lg p-4 sm:p-6 overflow-y-auto no-scrollbar min-h-0 max-h-[40vh]">
                     {paragraphs.map((sentences, pIndex) => (
                         <p key={pIndex} className="text-lg sm:text-xl leading-relaxed mb-4 last:mb-0">
                             {sentences.length > 0 ? sentences.map((sentence, sIndex) => {

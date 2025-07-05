@@ -1,17 +1,7 @@
 // contexts/settingsContext.tsx
 import React, { createContext, useReducer, useContext, useEffect, Dispatch } from 'react';
-import { 
-    THEME_KEY, 
-    FURIGANA_HIDDEN_KEY, 
-    COLOR_CODING_HIDDEN_KEY, 
-    PITCH_ACCENT_HIDDEN_KEY, 
-    ANALYSIS_DEPTH_KEY, 
-    FONT_SIZE_KEY,
-    NEW_WORDS_PER_DAY_KEY,
-    USER_API_KEY,
-    FONT_SIZE_STEPS,
-    DEFAULT_FONT_SIZE_INDEX
-} from '../utils/constants.ts';
+import { FONT_SIZE_STEPS, DEFAULT_FONT_SIZE_INDEX } from '../utils/constants.ts';
+import * as db from '../services/db.ts';
 
 // --- TYPE DEFINITIONS ---
 export type AnalysisDepth = 'low' | 'medium' | 'high';
@@ -28,13 +18,19 @@ export interface Settings {
     userApiKey: string | null;
 }
 
+export interface SettingsState extends Settings {
+    isLoading: boolean;
+}
+
 // --- ACTIONS ---
 type Action =
-  | { type: 'INITIALIZE_SETTINGS'; payload: Settings }
+  | { type: 'INITIALIZE_SETTINGS_SUCCESS'; payload: Settings }
+  | { type: 'INITIALIZE_SETTINGS_FAILURE' }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> };
 
 // --- INITIAL STATE ---
-const initialState: Settings = {
+const initialState: SettingsState = {
+    isLoading: true,
     theme: 'light',
     showFurigana: true,
     showColorCoding: true,
@@ -45,36 +41,34 @@ const initialState: Settings = {
     userApiKey: null,
 };
 
+const applySettingsToDOM = (settings: Settings) => {
+    document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+    document.documentElement.style.setProperty('--font-size-multiplier', FONT_SIZE_STEPS[settings.fontSizeIndex].value);
+};
+
 // --- REDUCER ---
-const settingsReducer = (state: Settings, action: Action): Settings => {
+const settingsReducer = (state: SettingsState, action: Action): SettingsState => {
     switch (action.type) {
-        case 'INITIALIZE_SETTINGS':
-            return action.payload;
+        case 'INITIALIZE_SETTINGS_SUCCESS':
+            applySettingsToDOM(action.payload);
+            return { ...state, isLoading: false, ...action.payload };
+        
+        case 'INITIALIZE_SETTINGS_FAILURE':
+            return { ...state, isLoading: false };
         
         case 'UPDATE_SETTINGS': {
             const newSettings = { ...state, ...action.payload };
-            // Persist settings to localStorage
-            localStorage.setItem(THEME_KEY, newSettings.theme);
-            localStorage.setItem(FURIGANA_HIDDEN_KEY, String(!newSettings.showFurigana));
-            localStorage.setItem(COLOR_CODING_HIDDEN_KEY, String(!newSettings.showColorCoding));
-            localStorage.setItem(PITCH_ACCENT_HIDDEN_KEY, String(!newSettings.showPitchAccent));
-            localStorage.setItem(ANALYSIS_DEPTH_KEY, newSettings.analysisDepth);
-            localStorage.setItem(FONT_SIZE_KEY, String(newSettings.fontSizeIndex));
-            localStorage.setItem(NEW_WORDS_PER_DAY_KEY, String(newSettings.newWordsPerDay));
             
-            // Handle API key persistence and state normalization
-            if (typeof newSettings.userApiKey === 'string' && newSettings.userApiKey.trim().length > 0) {
-                const trimmedKey = newSettings.userApiKey.trim();
-                localStorage.setItem(USER_API_KEY, trimmedKey);
-                newSettings.userApiKey = trimmedKey;
+            const settingsToSave: Partial<Settings> = { ...action.payload };
+            // Normalize API key before saving
+            if (typeof settingsToSave.userApiKey === 'string' && settingsToSave.userApiKey.trim().length > 0) {
+                settingsToSave.userApiKey = settingsToSave.userApiKey.trim();
             } else {
-                localStorage.removeItem(USER_API_KEY);
-                newSettings.userApiKey = null;
+                settingsToSave.userApiKey = null;
             }
-            
-            // Apply theme immediately
-            document.documentElement.classList.toggle('dark', newSettings.theme === 'dark');
-            document.documentElement.style.setProperty('--font-size-multiplier', FONT_SIZE_STEPS[newSettings.fontSizeIndex].value);
+
+            db.saveSettings(settingsToSave);
+            applySettingsToDOM(newSettings);
 
             return newSettings;
         }
@@ -84,7 +78,7 @@ const settingsReducer = (state: Settings, action: Action): Settings => {
 };
 
 // --- CONTEXT & PROVIDER ---
-const SettingsContext = createContext<{ state: Settings; dispatch: Dispatch<Action> }>({
+const SettingsContext = createContext<{ state: SettingsState; dispatch: Dispatch<Action> }>({
     state: initialState,
     dispatch: () => null
 });
@@ -93,26 +87,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [state, dispatch] = useReducer(settingsReducer, initialState);
 
     useEffect(() => {
-        try {
-            const settings: Settings = {
-                theme: (localStorage.getItem(THEME_KEY) as 'light' | 'dark') || 'light',
-                showFurigana: localStorage.getItem(FURIGANA_HIDDEN_KEY) !== 'true',
-                showColorCoding: localStorage.getItem(COLOR_CODING_HIDDEN_KEY) !== 'true',
-                showPitchAccent: localStorage.getItem(PITCH_ACCENT_HIDDEN_KEY) !== 'true',
-                analysisDepth: (localStorage.getItem(ANALYSIS_DEPTH_KEY) as AnalysisDepth) || 'medium',
-                fontSizeIndex: parseInt(localStorage.getItem(FONT_SIZE_KEY) || String(DEFAULT_FONT_SIZE_INDEX), 10),
-                newWordsPerDay: parseInt(localStorage.getItem(NEW_WORDS_PER_DAY_KEY) || '10', 10),
-                userApiKey: localStorage.getItem(USER_API_KEY) || null,
-            };
+        const loadSettings = async () => {
+            try {
+                const settings = await db.getAllSettings();
+                dispatch({ type: 'INITIALIZE_SETTINGS_SUCCESS', payload: settings });
+            } catch (error) {
+                console.error("Failed to load settings from IndexedDB", error);
+                dispatch({ type: 'INITIALIZE_SETTINGS_FAILURE' });
+            }
+        };
 
-            // Apply theme and font size on load
-            document.documentElement.classList.toggle('dark', settings.theme === 'dark');
-            document.documentElement.style.setProperty('--font-size-multiplier', FONT_SIZE_STEPS[settings.fontSizeIndex].value);
-
-            dispatch({ type: 'INITIALIZE_SETTINGS', payload: settings });
-        } catch (error) {
-            console.error("Failed to load settings from localStorage", error);
-        }
+        db.initDB().then(loadSettings).catch(err => {
+            console.error("DB Init failed", err);
+            dispatch({ type: 'INITIALIZE_SETTINGS_FAILURE' });
+        });
     }, []);
 
     return (
