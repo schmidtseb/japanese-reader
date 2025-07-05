@@ -78,7 +78,7 @@ const initialState: AppDataState = {
 
 
 // --- REDUCER ---
-const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataState => {
+export const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataState => {
     switch (action.type) {
         case 'INITIALIZE_DATA_SUCCESS':
             return { ...state, isLoading: false, ...action.payload };
@@ -267,10 +267,24 @@ const AppDataContext = createContext<{ state: AppDataState; dispatch: Dispatch<A
     dispatch: () => null
 });
 
-export function AppDataProvider({ children }: { children: React.ReactNode }) {
-    const [state, dispatch] = useReducer(appDataReducer, initialState);
+interface AppDataProviderProps {
+    children: React.ReactNode;
+    _testDispatch?: Dispatch<AppDataAction>;
+    _testState?: AppDataState;
+}
+
+export function AppDataProvider({ children, _testDispatch, _testState }: AppDataProviderProps) {
+    const [state, dispatch] = useReducer(appDataReducer, _testState || initialState);
+
+    const finalDispatch = _testDispatch || dispatch;
 
     useEffect(() => {
+        if (_testState) {
+            // If we are in a test with a provided state, we don't want the
+            // initial data loading effect to run and potentially overwrite it.
+            return;
+        }
+
         const loadData = async () => {
             try {
                 const history = await db.getAllTextEntries();
@@ -286,10 +300,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
             console.error("DB Init failed", err);
             dispatch({ type: 'INITIALIZE_DATA_FAILURE' });
         });
-    }, []);
+    }, [_testState]);
 
     return (
-        <AppDataContext.Provider value={{ state, dispatch }}>
+        <AppDataContext.Provider value={{ state, dispatch: finalDispatch }}>
             {children}
         </AppDataContext.Provider>
     );

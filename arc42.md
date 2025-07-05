@@ -27,7 +27,7 @@ The application is a client-side tool designed for Japanese language learners. I
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Usability**     | The primary users are language learners. The interface must be intuitive, responsive, and helpful.           | Clean, component-based UI. Responsive design (e.g., BottomSheet on mobile, Tooltip on desktop). Hotkeys for power users. Clear visual hierarchy. Dark/Light themes. Adjustable font sizes.                |
 | **Performance**   | API calls can be slow and costly. The app must feel fast and responsive during use.                          | **Caching:** All sentence analyses from the Gemini API are cached in IndexedDB. **Prefetching:** In Reading Mode, the next sentence's analysis is fetched in the background. Lightweight state management.      |
-| **Maintainability** | The codebase must be easy to understand, modify, and extend over time.                                      | **TypeScript:** Enforces type safety. **Component-Based:** Code is modularized into React components. **Structured Code:** Code is organized by `features`, `services`, `contexts`, `hooks`, and `utils`. |
+| **Maintainability** | The codebase must be easy to understand, modify, and extend over time.                                      | **TypeScript:** Enforces type safety. **Component-Based:** Code is modularized into React components. **Structured Code:** Code is organized by `features`, `services`, `contexts`, `hooks`, and `utils`. **Unit Tests** for core logic. |
 | **Offline Capability** | Users should be able to review their saved texts and analyses without an internet connection.                  | All user data, including cached analyses, is stored in **IndexedDB**, making previously viewed content available offline. New analyses require an internet connection.                                        |
 | **Configurability**| Users should be able to tailor the experience to their needs, including providing their own API keys.      | A comprehensive settings menu allows toggling UI features, adjusting learning parameters (e.g., new words per day), and managing the API key.                                                   |
 
@@ -88,6 +88,7 @@ The system is a standalone web application. It interacts with one primary extern
 -   **TypeScript:** Used to add static typing, improving code quality, developer experience, and long-term maintainability.
 -   **Tailwind CSS:** A utility-first CSS framework used for rapid and consistent styling. The configuration uses CSS variables for easy theming (light/dark modes).
 -   **Vite:** A modern frontend build tool that provides a fast development experience and optimized production builds.
+-   **Vitest:** A modern unit testing framework chosen for its speed and seamless integration with Vite.
 -   **Google Gemini API (`@google/genai`):** The cornerstone of the application. Chosen for its advanced natural language understanding and its ability to return structured JSON, which is critical for parsing the analysis reliably.
 -   **IndexedDB:** Chosen as the primary persistence solution for its high storage capacity (much larger than `localStorage`), asynchronous API, and strong support for storing and querying structured data. This avoids the complexity and cost of a backend database, making the app easy to deploy as a static site.
 
@@ -317,6 +318,7 @@ This is a static single-page application. The deployment strategy remains unchan
 | **Styling & Theming**   | A global stylesheet (`index.html`'s `<style>` block) defines CSS variables for the color palette. The `dark` class on the `<html>` element toggles between light and dark themes. Tailwind CSS is used for component-level styling. |
 | **Hotkeys**             | A `useHotkeys` custom hook contains a `useEffect` that attaches a global `keydown` event listener. It dispatches actions to the appropriate context based on the current `view`.                                                     |
 | **Responsiveness**      | Achieved via Tailwind's responsive prefixes (e.g., `md:`, `sm:`) and conditional rendering of components based on screen size (e.g., using `BottomSheet` on mobile vs. `Tooltip` on desktop).                                       |
+| **Testing**             | Unit tests are implemented using **Vitest**. Critical business logic in the service layer (`srs.ts`, `db.ts`) and state management (`appDataContext` reducer) is tested. `fake-indexeddb` is used to mock the database for testing the persistence layer. |
 
 ---
 
@@ -359,12 +361,11 @@ See Section 1.2 for a table-based view. In summary:
 -   **API Key Exposure/Management:** A default API key embedded at build time could be extracted from the static JS files. The reliance on users providing their own key is a significant hurdle for non-technical users.
 -   **Gemini API Changes/Costs:** The application is tightly coupled to the Gemini API. Breaking changes in the API or its pricing model could render the app unusable or expensive.
 -   **IndexedDB Complexity:** While abstracted by `db.ts`, IndexedDB has complexities (e.g., versioning, transaction management) that can be a source of bugs if not handled carefully.
--   **SRS Algorithm Rigidity:** The custom SRS algorithm in `srs.ts` is based on fixed intervals. More advanced systems use dynamic intervals based on performance, which could provide better learning outcomes.
 
 ### Technical Debt
 
--   **Simplified Furigana Logic:** The comment in `Furigana.tsx` notes that the okurigana-aware parsing is "simplified and might have edge cases." This could lead to incorrect furigana rendering for complex words.
--   **Lack of Unit/Integration Tests:** The codebase does not contain any test files. This increases the risk of regressions when making changes. Key logic, especially in `srs.ts`, `db.ts`, and the context reducers, should be unit tested.
+-   **Limited Test Coverage**: While unit tests cover critical business logic (SRS, DB, state reducer) and some key UI components (`EditorView`), test coverage for other UI components and complex user interaction flows (e.g., `ReadingModeView`, `ReviewController`) remains low. This means some regressions in the UI or component interactions may not be caught automatically.
+-   **SRS Algorithm Rigidity:** The custom SRS algorithm in `srs.ts` is based on fixed intervals. More advanced systems use dynamic intervals based on performance, which could provide better learning outcomes.
 
 ---
 

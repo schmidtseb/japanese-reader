@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-07-07
+
+### Added
+-   **Unit Testing**: Introduced Vitest as the testing framework. Added comprehensive unit tests for critical business logic, including the SRS algorithm (`srs.ts`), the IndexedDB service (`db.ts`), and the primary application state reducer (`appDataContext`). This improves code reliability and reduces the risk of regressions.
+
 ## [3.0.0] - 2025-07-06
 
 ### Changed

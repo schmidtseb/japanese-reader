@@ -83,10 +83,19 @@ const SettingsContext = createContext<{ state: SettingsState; dispatch: Dispatch
     dispatch: () => null
 });
 
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
-    const [state, dispatch] = useReducer(settingsReducer, initialState);
+interface SettingsProviderProps {
+    children: React.ReactNode;
+    _testState?: SettingsState;
+}
+
+export function SettingsProvider({ children, _testState }: SettingsProviderProps) {
+    const [state, dispatch] = useReducer(settingsReducer, _testState || initialState);
 
     useEffect(() => {
+        if (_testState) {
+            return;
+        }
+
         const loadSettings = async () => {
             try {
                 const settings = await db.getAllSettings();
@@ -101,7 +110,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             console.error("DB Init failed", err);
             dispatch({ type: 'INITIALIZE_SETTINGS_FAILURE' });
         });
-    }, []);
+    }, [_testState]);
 
     return (
         <SettingsContext.Provider value={{ state, dispatch }}>
