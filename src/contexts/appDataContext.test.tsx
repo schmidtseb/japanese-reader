@@ -4,7 +4,7 @@ import * as db from '../services/db';
 
 // Mock the db service
 vi.mock('../services/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof db>();
+  const actual = (await importOriginal()) as typeof db;
   return {
     ...actual, // Use actual implementations for type correctness if needed
     addOrUpdateTextEntry: vi.fn(),

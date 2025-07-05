@@ -1,8 +1,8 @@
-// ui/components/DeckManager.tsx
+// src/features/Review/components/DeckManager.tsx
 import React from 'react';
-import { ReviewItem } from '../contexts/index.ts';
-import { Furigana } from './Furigana.tsx';
-import { PitchAccentVisualizer } from './PitchAccentVisualizer.tsx';
+import { ReviewItem } from '../../../contexts/index.ts';
+import { Furigana } from '../../../components/Furigana.tsx';
+import { PitchAccentVisualizer } from '../../../components/PitchAccentVisualizer.tsx';
 
 const DeckManagerItem = ({ item, onDelete }: { item: ReviewItem, onDelete: (id: string) => void }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);

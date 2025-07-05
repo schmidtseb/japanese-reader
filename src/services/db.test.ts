@@ -61,7 +61,7 @@ describe('db service', () => {
 
   describe('Review Deck', () => {
     it('should add and retrieve a review item', async () => {
-      const newItem: ReviewItem = { id: 'word-1', type: 'word', content: {}, srsStage: 0, incorrectAnswerCount: 0, nextReviewDate: 1, addedAt: 1 };
+      const newItem: ReviewItem = { id: 'word-1', type: 'word', content: {}, srsStage: 0, incorrectAnswerCount: 0, nextReviewDate: 1, addedAt: 1, intervalModifier: 1.0 };
       await db.addOrUpdateReviewItem(newItem);
       const items = await db.getAllReviewItems();
       expect(items).toHaveLength(1);

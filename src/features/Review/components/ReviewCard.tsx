@@ -1,7 +1,7 @@
-// ui/components/ReviewCard.tsx
+// src/features/Review/components/ReviewCard.tsx
 import { useState, useEffect } from 'react';
-import { Furigana } from './Furigana.tsx';
-import { ReviewItem, ReviewQuality } from '../contexts/index.ts';
+import { Furigana } from '../../../components/Furigana.tsx';
+import { ReviewItem, ReviewQuality } from '../../../contexts/index.ts';
 
 const ReviewExitButton = ({ onExit }: { onExit: () => void }) => (
     <div className="w-full flex justify-end mb-4">
@@ -68,8 +68,8 @@ export const ReviewCard = ({ item, onReview, onExit }: ReviewCardProps) => {
             <div className="relative w-full min-h-[20rem] flex flex-col justify-center items-center p-6 bg-surface-soft rounded-2xl shadow-lg">
                 {!showAnswer ? frontHTML : backHTML}
             </div>
-            <div className="mt-8 w-full">
-                {showAnswer ? (
+            {showAnswer ? (
+                <div className="mt-8 w-full">
                     <div>
                         <p className="text-center text-text-muted mb-4 text-sm">How well did you remember?</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
@@ -79,12 +79,14 @@ export const ReviewCard = ({ item, onReview, onExit }: ReviewCardProps) => {
                             <button onClick={() => handleGrade(4)} data-action="review-quality-4" className="text-lg font-bold py-4 px-4 rounded-xl bg-accent-subtle-bg text-accent-text hover:bg-accent-subtle-bg/80 focus-ring transition">Easy <span className="text-xs font-normal">(4)</span></button>
                         </div>
                     </div>
-                ) : (
+                </div>
+            ) : (
+                <div className="mt-8 w-full flex items-center">
                     <button onClick={() => setShowAnswer(true)} data-action="review-show-answer" className="w-full max-w-xs mx-auto btn-primary text-lg">
                         Show Answer <span className="text-sm font-normal text-primary-text/80 ml-2">(Space)</span>
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };

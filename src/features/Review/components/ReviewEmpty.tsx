@@ -1,4 +1,4 @@
-// ui/components/ReviewEmpty.tsx
+// src/features/Review/components/ReviewEmpty.tsx
 import React from 'react';
 
 interface ReviewEmptyProps {

@@ -1,4 +1,4 @@
-// ui/components/AnalysisPlaceholder.tsx
+// src/features/Reader/components/AnalysisPlaceholder.tsx
 import React from 'react';
 
 export const AnalysisPlaceholder = ({ sentence, isLoading = true }: { sentence: string; isLoading?: boolean }) => (
@@ -10,7 +10,7 @@ export const AnalysisPlaceholder = ({ sentence, isLoading = true }: { sentence: 
          </div>
          {isLoading && (
              <div className="absolute top-4 right-4 flex items-center gap-2">
-                 <i className="bi bi-arrow-repeat text-lg text-text-muted animate-spin"></i>
+                 <i className="bi bi-arrow-repeat text-lg text-text-muted animate-spin" role="status" aria-label="Loading analysis"></i>
              </div>
          )}
     </div>

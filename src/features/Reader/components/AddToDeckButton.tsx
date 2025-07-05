@@ -1,7 +1,7 @@
-// ui/components/AddToDeckButton.tsx
+// src/features/Reader/components/AddToDeckButton.tsx
 import React from 'react';
-import { useAppData } from '../contexts/index.ts';
-import { useModal } from './Modal.tsx';
+import { useAppData } from '../../../contexts/index.ts';
+import { useModal } from '../../../components/Modal.tsx';
 
 export function AddToDeckButton({ itemId, itemType, itemContent }: { itemId: string, itemType: 'word' | 'grammar', itemContent: object }) {
     const { state, dispatch } = useAppData();
@@ -29,6 +29,7 @@ export function AddToDeckButton({ itemId, itemType, itemContent }: { itemId: str
                 content: itemContent,
                 textEntryId: currentTextEntryId,
                 srsStage: 0,
+                intervalModifier: 1.0, // Start with a default modifier
                 incorrectAnswerCount: 0,
                 nextReviewDate: new Date().setHours(0,0,0,0),
                 addedAt: Date.now(),

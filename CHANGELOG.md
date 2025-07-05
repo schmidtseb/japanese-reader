@@ -5,12 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.1.0] - 2025-07-07
+## [3.4.0] - 2025-07-06
+
+### Changed
+-   **Dynamic SRS Intervals**: Enhanced the Spaced Repetition System algorithm to be more adaptive. The interval between reviews is now adjusted based on user performance ("Easy", "Hard", "Again" ratings), leading to a more personalized and effective learning schedule. This addresses a point of technical debt regarding SRS rigidity.
+
+## [3.3.0] - 2025-07-06
+
+### Added
+-   **Flexible Review Sessions**: The review start screen now features separate "Learn" and "Review" buttons, allowing users to choose whether to tackle new items or due reviews first, providing more control over their study sessions.
+
+### Changed
+-   **Smarter SRS Penalties**: Refined the review logic for items marked "Again". An item is now only penalized once per session, and it will be shown again later in the same session. If an item is marked "Again" and then later answered correctly, its SRS stage will not be promoted, ensuring it has been re-learned without artificially inflating its mastery level.
+
+## [3.2.0] - 2025-07-06
+
+### Changed
+-   Replaced the fixed, repeating 12-color palette for grammar pattern highlights with a dynamic color generation system. Every pattern now receives a unique, aesthetically-pleasing color based on the golden angle, improving readability for complex sentences. The colors are also theme-aware, adjusting for light and dark modes.
+
+## [3.1.0] - 2025-07-06
 
 ### Added
 -   **Unit Testing**: Introduced Vitest as the testing framework. Added comprehensive unit tests for critical business logic, including the SRS algorithm (`srs.ts`), the IndexedDB service (`db.ts`), and the primary application state reducer (`appDataContext`). This improves code reliability and reduces the risk of regressions.
 
-## [3.0.0] - 2025-07-06
+## [3.0.0] - 2025-07-05
 
 ### Changed
 -   **BREAKING CHANGE: Data Persistence Layer Overhaul**. The application's storage has been migrated from `localStorage` to `IndexedDB`.

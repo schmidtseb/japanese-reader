@@ -15,8 +15,16 @@ const SRS_STAGE_INTERVALS_HOURS = [
     2880,   // Stage 8: 4 months (120 days)
 ];
 
+const DEFAULT_INTERVAL_MODIFIER = 1.0;
+const MIN_INTERVAL_MODIFIER = 0.5;
+const MAX_INTERVAL_MODIFIER = 2.5;
+const MODIFIER_EASY_BUMP = 0.15;
+const MODIFIER_HARD_PENALTY = 0.15;
+const MODIFIER_AGAIN_PENALTY = 0.20;
+
+
 /**
- * Calculates the next review date for an item based on a fixed-stage SRS.
+ * Calculates the next review date for an item based on a dynamic, performance-adjusted SRS.
  * @param item The review item to update.
  * @param quality The user's rating of their recall (1: Again, 2: Hard, 3: Good, 4: Easy).
  * @returns An updated ReviewItem with new SRS parameters.
@@ -24,40 +32,55 @@ const SRS_STAGE_INTERVALS_HOURS = [
 export function calculateNextReview(item: ReviewItem, quality: ReviewQuality): ReviewItem {
     const updatedItem = { ...item };
     let newSrsStage = item.srsStage;
+    
+    // Initialize intervalModifier for backward compatibility with items that don't have it.
+    let newIntervalModifier = item.intervalModifier ?? DEFAULT_INTERVAL_MODIFIER;
 
     if (quality === 1) { // "Again" -> Incorrect answer
         updatedItem.incorrectAnswerCount = (item.incorrectAnswerCount || 0) + 1;
         
-        // Calculate penalty based on user's formula
+        // Retain the existing stage penalty logic
         const incorrectAdjustmentCount = Math.ceil(updatedItem.incorrectAnswerCount / 2);
         const srsPenaltyFactor = item.srsStage >= 5 ? 2 : 1;
         const penalty = incorrectAdjustmentCount * srsPenaltyFactor;
-        
-        // Apply penalty, but don't go below stage 1
         newSrsStage = Math.max(1, item.srsStage - penalty);
+
+        // Adjust interval modifier downwards for incorrect answers
+        newIntervalModifier -= MODIFIER_AGAIN_PENALTY;
 
     } else { // Correct answer (Hard, Good, Easy)
         // Reset incorrect counter on any successful recall
         updatedItem.incorrectAnswerCount = 0;
 
-        if (quality === 2) { // "Hard" -> Correct, but repeat current stage
-            // No change to newSrsStage, it stays the same as item.srsStage
-        } else { // "Good" (3) or "Easy" (4) -> Correct, advance stage
+        if (quality === 2) { // "Hard"
+            // Stage does not advance, but the interval modifier is reduced,
+            // making the next review for this stage sooner.
+            newIntervalModifier -= MODIFIER_HARD_PENALTY;
+        } else if (quality === 3) { // "Good"
+            // Stage advances, modifier is unchanged. Standard progression.
+            newSrsStage = item.srsStage + 1;
+        } else { // "Easy" (4)
+            // Stage advances and modifier increases, pushing the next review further out.
+            newIntervalModifier += MODIFIER_EASY_BUMP;
             newSrsStage = item.srsStage + 1;
         }
     }
+    
+    // Clamp the modifier to prevent extreme values.
+    updatedItem.intervalModifier = Math.max(MIN_INTERVAL_MODIFIER, Math.min(newIntervalModifier, MAX_INTERVAL_MODIFIER));
 
     if (newSrsStage >= 9) {
         // Item is "burned"
         updatedItem.srsStage = 9;
-        // Set next review date to a very distant future
         updatedItem.nextReviewDate = new Date('9999-12-31').getTime();
     } else {
         updatedItem.srsStage = newSrsStage;
-        const intervalHours = SRS_STAGE_INTERVALS_HOURS[updatedItem.srsStage];
+        const baseIntervalHours = SRS_STAGE_INTERVALS_HOURS[updatedItem.srsStage];
+        // The core of the dynamic system: apply the modifier to the base interval.
+        const modifiedIntervalHours = baseIntervalHours * updatedItem.intervalModifier;
+        
         const now = new Date();
-        // Calculate next review time from now
-        updatedItem.nextReviewDate = new Date(now.getTime() + intervalHours * 60 * 60 * 1000).getTime();
+        updatedItem.nextReviewDate = new Date(now.getTime() + modifiedIntervalHours * 60 * 60 * 1000).getTime();
     }
 
     return updatedItem;

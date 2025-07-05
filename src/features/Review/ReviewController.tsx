@@ -2,32 +2,16 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppData, ReviewItem, ReviewQuality, View, useSettings } from '../../contexts/index.ts';
 import { calculateNextReview } from '../../services/srs.ts';
 import { useModal } from '../../components/Modal.tsx';
-import { ReviewCard } from '../../components/ReviewCard.tsx';
-import { ReviewComplete } from '../../components/ReviewComplete.tsx';
-import { ReviewEmpty } from '../../components/ReviewEmpty.tsx';
-import { DeckManager } from '../../components/DeckManager.tsx';
-import { LearningStudyCard } from './LearningStudyCard.tsx';
-import { LearningQuizCard } from './LearningQuizCard.tsx';
-import { ChunkCompleteScreen } from './ChunkCompleteScreen.tsx';
+import { ReviewCard } from './components/ReviewCard.tsx';
+import { ReviewComplete } from './components/ReviewComplete.tsx';
+import { ReviewEmpty } from './components/ReviewEmpty.tsx';
+import { DeckManager } from './components/DeckManager.tsx';
+import { LearningStudyCard } from './components/LearningStudyCard.tsx';
+import { LearningQuizCard } from './components/LearningQuizCard.tsx';
+import { ChunkCompleteScreen } from './components/ChunkCompleteScreen.tsx';
+import { ReviewStart } from './components/ReviewStart.tsx';
 
 const CHUNK_SIZE = 5;
-
-const ReviewStart = ({ newCount, reviewCount, onStart }: { newCount: number, reviewCount: number, onStart: () => void }) => (
-    <div className="text-center py-16 px-6 max-w-lg mx-auto flex flex-col h-full justify-center">
-        <i className="bi bi-play-circle text-6xl text-accent mx-auto mb-6" aria-hidden="true"></i>
-        <h2 className="text-2xl font-bold text-text-primary">Ready for your session?</h2>
-        <div className="mt-4 text-lg space-y-2 text-text-secondary">
-            <p>Today's plan:</p>
-            <p><strong className="font-bold text-primary">{newCount}</strong> new items to learn</p>
-            <p><strong className="font-bold text-accent">{reviewCount}</strong> items to review</p>
-        </div>
-        <div className="mt-8">
-            <button onClick={onStart} className="btn-primary text-xl px-10 py-4">
-                Start Session
-            </button>
-        </div>
-    </div>
-);
 
 export const ReviewController = () => {
     const { state, dispatch } = useAppData();
@@ -37,43 +21,19 @@ export const ReviewController = () => {
     const [mode, setMode] = useState<'LOADING' | 'START' | 'LEARNING' | 'REVIEW' | 'COMPLETE' | 'EMPTY' | 'MANAGE'>('LOADING');
     const [learningPhase, setLearningPhase] = useState<'STUDY' | 'QUIZ' | 'CHUNK_COMPLETE'>('STUDY');
     
+    const [sessionQueues, setSessionQueues] = useState<{ newItemsForSession: ReviewItem[], allDueReviewItems: ReviewItem[] }>({ newItemsForSession: [], allDueReviewItems: [] });
     const [learningChunks, setLearningChunks] = useState<ReviewItem[][]>([]);
-    const [reviewQueue, setReviewQueue] = useState<ReviewItem[]>([]);
     
+    // State for the active review session
+    const [reviewSubQueue, setReviewSubQueue] = useState<ReviewItem[]>([]);
+    const [penalizedInSession, setPenalizedInSession] = useState<Set<string>>(new Set());
+
     const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
     const [studyIndex, setStudyIndex] = useState(0);
     const [quizQueue, setQuizQueue] = useState<ReviewItem[]>([]);
     
     const [sessionStats, setSessionStats] = useState({ learned: 0, reviewed: 0 });
-    const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
 
-    const sessionQueues = useMemo(() => {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-
-        // Filter the entire deck based on the current text context first.
-        const deckForSession = state.reviewDeck.filter(item => {
-            if (!state.currentTextEntryId) {
-                return true; // Global context, include all items.
-            }
-            // Contextual view: include items for this text OR old global items.
-            return item.textEntryId === state.currentTextEntryId || !item.textEntryId;
-        });
-
-        const allNewItems = deckForSession
-            .filter(item => item.srsStage === 0)
-            .sort((a, b) => a.addedAt - b.addedAt);
-            
-        const allDueReviewItems = deckForSession
-            .filter(item => item.srsStage > 0 && item.nextReviewDate <= now.getTime())
-            .sort((a, b) => a.nextReviewDate - b.nextReviewDate);
-
-        return { 
-            newItemsForSession: allNewItems.slice(0, settingsState.newWordsPerDay), 
-            allDueReviewItems 
-        };
-    }, [state.reviewDeck, state.currentTextEntryId, settingsState.newWordsPerDay]);
-    
     const nextReviewTimestamp = useMemo(() => {
         const deckForSession = state.reviewDeck.filter(item => {
             if (!state.currentTextEntryId) return true;
@@ -93,41 +53,60 @@ export const ReviewController = () => {
     }, [state.reviewDeck, state.currentTextEntryId]);
 
     const reevaluateMode = useCallback(() => {
+        const nowTimestamp = Date.now();
+
         const deckForContext = state.reviewDeck.filter(item => {
              if (!state.currentTextEntryId) return true;
              return item.textEntryId === state.currentTextEntryId || !item.textEntryId;
         });
 
+        const allNewItems = deckForContext
+            .filter(item => item.srsStage === 0)
+            .sort((a, b) => a.addedAt - b.addedAt);
+            
+        const allDueReviewItems = deckForContext
+            .filter(item => item.srsStage > 0 && item.nextReviewDate <= nowTimestamp)
+            .sort((a, b) => a.nextReviewDate - b.nextReviewDate);
+
+        const newItemsForSession = allNewItems.slice(0, settingsState.newWordsPerDay);
+        setSessionQueues({ newItemsForSession, allDueReviewItems });
+
+        const chunks: ReviewItem[][] = [];
+        for (let i = 0; i < newItemsForSession.length; i += CHUNK_SIZE) {
+            chunks.push(newItemsForSession.slice(i, i + CHUNK_SIZE));
+        }
+        setLearningChunks(chunks);
+
         if (deckForContext.length === 0) {
             setMode('EMPTY');
-        } else if (sessionQueues.newItemsForSession.length === 0 && sessionQueues.allDueReviewItems.length === 0) {
+        } else if (newItemsForSession.length === 0 && allDueReviewItems.length === 0) {
             setMode('COMPLETE');
         } else {
             setMode('START');
         }
-    }, [state.reviewDeck, state.currentTextEntryId, sessionQueues]);
-
+    }, [state.reviewDeck, state.currentTextEntryId, settingsState.newWordsPerDay]);
+    
     useEffect(() => {
+        // This effect runs once on mount or when re-evaluating the entire session state.
         if (mode === 'LOADING' || (mode !== 'LEARNING' && mode !== 'REVIEW' && mode !== 'MANAGE')) {
-            const { newItemsForSession, allDueReviewItems } = sessionQueues;
-            const chunks: ReviewItem[][] = [];
-            for (let i = 0; i < newItemsForSession.length; i += CHUNK_SIZE) {
-                chunks.push(newItemsForSession.slice(i, i + CHUNK_SIZE));
-            }
-            setLearningChunks(chunks);
-            setReviewQueue(allDueReviewItems);
-
             // Reset all session progress
             setCurrentChunkIndex(0);
             setStudyIndex(0);
             setQuizQueue([]);
-            setCurrentReviewIndex(0);
+            setReviewSubQueue([]);
             setSessionStats({ learned: 0, reviewed: 0 });
             setLearningPhase('STUDY');
 
             reevaluateMode();
         }
-    }, [sessionQueues, mode, reevaluateMode]);
+    }, [mode, reevaluateMode]);
+    
+    useEffect(() => {
+        // This effect handles the end of a review sub-session.
+        if (mode === 'REVIEW' && reviewSubQueue.length === 0 && sessionStats.reviewed > 0) {
+             reevaluateMode();
+        }
+    }, [reviewSubQueue, mode, sessionStats.reviewed, reevaluateMode]);
 
     const handleExit = () => {
         if (state.currentTextEntryId) {
@@ -137,13 +116,21 @@ export const ReviewController = () => {
         }
     };
     
-    const startSession = () => {
+    const handleStartLearning = () => {
         if (learningChunks.length > 0) {
             setMode('LEARNING');
-        } else if (reviewQueue.length > 0) {
+        } else {
+            reevaluateMode();
+        }
+    };
+
+    const handleStartReviewing = () => {
+        if (sessionQueues.allDueReviewItems.length > 0) {
+            setPenalizedInSession(new Set());
+            setReviewSubQueue([...sessionQueues.allDueReviewItems]);
             setMode('REVIEW');
         } else {
-            setMode('COMPLETE');
+            reevaluateMode();
         }
     };
 
@@ -158,13 +145,11 @@ export const ReviewController = () => {
     const handleQuizAnswer = (item: ReviewItem, remembered: boolean) => {
         let newQueue = [...quizQueue];
         if (remembered) {
-            // A remembered item in the learning quiz is graded as "Good"
-            const updatedItem = calculateNextReview(item, 3);
+            const updatedItem = calculateNextReview(item, 3); // "Good"
             dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
             setSessionStats(prev => ({ ...prev, learned: prev.learned + 1 }));
             newQueue = newQueue.filter(i => i.id !== item.id);
         } else {
-            // If forgotten, put it back at the end of the quiz queue
             newQueue = newQueue.filter(i => i.id !== item.id);
             newQueue.push(item); 
         }
@@ -177,32 +162,55 @@ export const ReviewController = () => {
     };
 
     const advanceAfterChunk = () => {
+        // If there are more chunks of new items to learn
         if (currentChunkIndex < learningChunks.length - 1) {
             setCurrentChunkIndex(prev => prev + 1);
             setStudyIndex(0);
             setLearningPhase('STUDY');
         } else {
-            // Finished all learning chunks
-            if (reviewQueue.length > 0) {
-                setMode('REVIEW');
+            // All learning chunks for this session are done.
+            // Now, check if there are any due reviews waiting.
+            // We use the initially calculated queue. This is safe because an item cannot be
+            // both new (srsStage=0) and due (srsStage>0) at the same time.
+            if (sessionQueues.allDueReviewItems.length > 0) {
+                handleStartReviewing(); // This will switch mode to 'REVIEW'
             } else {
-                setMode('COMPLETE');
+                // No more learning, no reviews. The session is over.
+                // Re-evaluate will take us to the 'COMPLETE' screen.
+                reevaluateMode();
             }
         }
     };
     
     const handleReviewAction = (quality: ReviewQuality) => {
-        const currentItem = reviewQueue[currentReviewIndex];
+        const currentItem = reviewSubQueue[0];
         if (!currentItem) return;
 
-        const updatedItem = calculateNextReview(currentItem, quality);
-        dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
-        setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
-
-        if (currentReviewIndex + 1 < reviewQueue.length) {
-            setCurrentReviewIndex(prev => prev + 1);
-        } else {
-            setMode('COMPLETE');
+        if (quality === 1) { // "Again"
+            // Only calculate SRS penalty on the first "Again" in a session.
+            if (!penalizedInSession.has(currentItem.id)) {
+                const updatedItem = calculateNextReview(currentItem, quality);
+                dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
+                setPenalizedInSession(prev => new Set(prev).add(currentItem.id));
+            }
+            // Always move the item to the back of the queue to be reviewed again.
+            setReviewSubQueue(prevQueue => {
+                const rest = prevQueue.slice(1);
+                return [...rest, currentItem];
+            });
+        } else { // Correct answer (Hard, Good, Easy)
+            // If the item was penalized in this session, don't upgrade its SRS stage.
+            // Just remove it from the queue for this session, as the user has now "re-learned" it.
+            if (penalizedInSession.has(currentItem.id)) {
+                setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
+                setReviewSubQueue(prevQueue => prevQueue.slice(1));
+            } else {
+                // This is a normal correct answer for an item not previously failed in this session.
+                const updatedItem = calculateNextReview(currentItem, quality);
+                dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
+                setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
+                setReviewSubQueue(prevQueue => prevQueue.slice(1));
+            }
         }
     };
     
@@ -219,14 +227,18 @@ export const ReviewController = () => {
             return <div className="p-6 text-center text-text-muted">Loading review session...</div>;
         
         case 'START':
-            return <ReviewStart newCount={sessionQueues.newItemsForSession.length} reviewCount={sessionQueues.allDueReviewItems.length} onStart={startSession} />;
+            return <ReviewStart 
+                newCount={sessionQueues.newItemsForSession.length} 
+                reviewCount={sessionQueues.allDueReviewItems.length} 
+                onStartLearning={handleStartLearning}
+                onStartReviewing={handleStartReviewing}
+                onExit={handleExit}
+            />;
         
         case 'LEARNING': {
             const currentChunk = learningChunks[currentChunkIndex];
             if (!currentChunk) {
-                // Should not happen, but as a fallback, go to reviews or complete
-                if(reviewQueue.length > 0) setMode('REVIEW');
-                else setMode('COMPLETE');
+                reevaluateMode();
                 return null;
             }
             
@@ -243,7 +255,7 @@ export const ReviewController = () => {
                     />
                 case 'QUIZ': {
                     const currentQuizItem = quizQueue[0];
-                    if (!currentQuizItem) return null; // Should transition to next phase
+                    if (!currentQuizItem) return null;
                     return <LearningQuizCard
                         item={currentQuizItem}
                         onExit={handleExit}
@@ -256,28 +268,31 @@ export const ReviewController = () => {
                         onContinue={advanceAfterChunk}
                         onExit={handleExit}
                         hasMoreChunks={currentChunkIndex < learningChunks.length - 1}
-                        hasReviews={reviewQueue.length > 0}
+                        hasReviews={sessionQueues.allDueReviewItems.length > 0}
                     />;
             }
         }
 
         case 'REVIEW': {
-            const currentItem = reviewQueue[currentReviewIndex];
+            const currentItem = reviewSubQueue[0];
             if (!currentItem) {
-                setMode('COMPLETE');
-                return null;
+                return <div className="p-6 text-center text-text-muted">Loading next review...</div>;
             }
             return <ReviewCard item={currentItem} onReview={handleReviewAction} onExit={handleExit} />;
         }
             
-        case 'COMPLETE':
+        case 'COMPLETE': {
+            const hasMoreItemsForNextSession = sessionQueues.newItemsForSession.length > 0 || sessionQueues.allDueReviewItems.length > 0;
             return <ReviewComplete 
                 learnedCount={sessionStats.learned} 
                 reviewedCount={sessionStats.reviewed} 
                 onManage={() => setMode('MANAGE')} 
                 onExit={handleExit} 
                 nextReviewTimestamp={nextReviewTimestamp}
+                hasMoreItems={hasMoreItemsForNextSession}
+                onRestart={reevaluateMode}
             />;
+        }
         
         case 'EMPTY':
             return <ReviewEmpty onManage={() => setMode('MANAGE')} onExit={handleExit} />;

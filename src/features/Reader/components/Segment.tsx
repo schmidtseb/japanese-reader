@@ -1,10 +1,10 @@
-// ui/components/Segment.tsx
+// src/features/Reader/components/Segment.tsx
 import React, { useMemo } from 'react';
-import { Furigana } from './Furigana.tsx';
-import { PitchAccentVisualizer } from './PitchAccentVisualizer.tsx';
+import { Furigana } from '../../../components/Furigana.tsx';
+import { PitchAccentVisualizer } from '../../../components/PitchAccentVisualizer.tsx';
 import { AddToDeckButton } from './AddToDeckButton.tsx';
-import { getCategoryClass } from '../utils/style-utils.ts';
-import { useSettings, useUI } from '../contexts/index.ts';
+import { getCategoryClass } from '../../../utils/style-utils.ts';
+import { useSettings, useUI } from '../../../contexts/index.ts';
 
 const SegmentDetails = ({ segment }: { segment: any }) => (
     <div>
@@ -52,7 +52,7 @@ export const Segment = ({ segment }: { segment: any }) => {
         const totalUnderlineHeightWithGap = underlineHeight + underlineGap;
 
         const gradients = patterns.map((p: any) => 
-            `linear-gradient(to right, rgb(var(--color-pattern-${p.colorIndex}-rgb)), rgb(var(--color-pattern-${p.colorIndex}-rgb)))`
+            `linear-gradient(to right, ${p.color}, ${p.color})`
         ).join(', ');
 
         const positions = patterns.map((_: any, i: number) => 

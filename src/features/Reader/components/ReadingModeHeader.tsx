@@ -1,6 +1,6 @@
-// ui/components/ReadingModeHeader.tsx
+// src/features/Reader/components/ReadingModeHeader.tsx
 import React, { useState, useEffect } from 'react';
-import { TextEntry } from '../contexts/index.ts';
+import { TextEntry } from '../../../contexts/index.ts';
 
 interface ReadingModeHeaderProps {
     entry: TextEntry;

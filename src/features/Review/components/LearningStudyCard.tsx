@@ -1,6 +1,6 @@
-// src/features/Review/LearningStudyCard.tsx
-import { ReviewItem } from '../../contexts/index.ts';
-import { Furigana } from '../../components/Furigana.tsx';
+// src/features/Review/components/LearningStudyCard.tsx
+import { ReviewItem } from '../../../contexts/index.ts';
+import { Furigana } from '../../../components/Furigana.tsx';
 
 const StudyCardContent = ({ item }: { item: ReviewItem }) => {
     if (item.type === 'word') {

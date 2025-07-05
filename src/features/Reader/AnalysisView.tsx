@@ -1,27 +1,30 @@
 import React, { useState, useMemo } from 'react';
 import { TtsButton } from '../../components/TtsButton.tsx';
-import { Segment } from '../../components/Segment.tsx';
-import { GrammarNote } from '../../components/GrammarNote.tsx';
-import { HotkeyLegend } from '../../components/HotkeyLegend.tsx';
+import { Segment } from './components/Segment.tsx';
+import { GrammarNote } from './components/GrammarNote.tsx';
+import { HotkeyLegend } from './components/HotkeyLegend.tsx';
+import { useSettings } from '../../contexts/index.ts';
+import { getPatternColor } from '../../utils/style-utils.ts';
 
 export function AnalysisView({ analysis, onReanalyze }: { analysis: any, onReanalyze: () => void }) {
     const [focusedPattern, setFocusedPattern] = useState(null);
     const [showTranslation, setShowTranslation] = useState(false);
+    const { state: settingsState } = useSettings();
 
     const segmentsWithPatterns = useMemo(() => {
         if (!analysis.grammar_patterns) return analysis.analysis.map(seg => ({ ...seg, patterns: [] }));
         
         const segmentPatterns = new Map();
         analysis.grammar_patterns.forEach((pattern: any, i: number) => {
-            const colorIndex = i % 12;
-            const idClass = `pattern-${colorIndex}`;
+            const color = getPatternColor(i, settingsState.theme);
+            const idClass = `pattern-dynamic-${i}`;
             pattern.constituent_indices?.forEach((index: number) => {
                 if (!segmentPatterns.has(index)) segmentPatterns.set(index, []);
-                segmentPatterns.get(index).push({ ...pattern, idClass, colorIndex });
+                segmentPatterns.get(index).push({ ...pattern, idClass, color });
             });
         });
         return analysis.analysis.map((seg: any, i: number) => ({ ...seg, patterns: segmentPatterns.get(i) || [] }));
-    }, [analysis]);
+    }, [analysis, settingsState.theme]);
     
     const handleNoteClick = (pattern: any) => {
         setFocusedPattern((prev: any) => (prev?.idClass === pattern.idClass ? null : pattern));
@@ -61,9 +64,9 @@ export function AnalysisView({ analysis, onReanalyze }: { analysis: any, onReana
                         <h3 className="text-sm font-semibold uppercase text-text-muted mb-3 tracking-wider">Grammar & Phrases</h3>
                         <ul className="space-y-3">
                             {analysis.grammar_patterns.map((pattern: any, index: number) => {
-                                const colorIndex = index % 12;
-                                const idClass = `pattern-${colorIndex}`;
-                                const enhancedPattern = { ...pattern, idClass, colorIndex, fullAnalysis: analysis };
+                                const color = getPatternColor(index, settingsState.theme);
+                                const idClass = `pattern-dynamic-${index}`;
+                                const enhancedPattern = { ...pattern, idClass, color, fullAnalysis: analysis };
                                 return (
                                     <GrammarNote
                                         key={index}

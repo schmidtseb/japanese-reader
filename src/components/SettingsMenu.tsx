@@ -134,10 +134,10 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
     return (
         <>
             <div
-                className="fixed inset-0 bg-black/10 backdrop-blur-sm z-10"
+                className="fixed inset-0 bg-black/10 backdrop-blur-sm z-[80]"
                 onClick={() => setIsOpen(false)}
             ></div>
-            <div ref={menuRef} className="fixed top-20 right-4 flex flex-col w-[95vw] max-w-sm glass-morphism rounded-xl shadow-2xl ring-1 ring-border-subtle z-20 origin-top-right animate-fade-in max-h-[calc(100vh-12rem)]">
+            <div ref={menuRef} className="fixed top-20 right-4 flex flex-col w-[95vw] max-w-sm glass-morphism rounded-xl shadow-2xl ring-1 ring-border-subtle z-[90] origin-top-right animate-fade-in max-h-[calc(100vh-12rem)]">
                 <header className="flex items-center justify-between p-4 border-b border-border-subtle flex-shrink-0">
                     <h3 className="text-lg font-semibold text-text-primary">Settings</h3>
                     <button onClick={() => setIsOpen(false)} className="btn-ghost p-1" title="Close Settings (Esc)">

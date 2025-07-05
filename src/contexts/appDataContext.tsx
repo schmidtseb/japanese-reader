@@ -22,6 +22,7 @@ export interface ReviewItem {
     content: any;
     textEntryId?: string; // Link to the source text
     srsStage: number; // 0 for new, 1-8 for stages, 9 for burned
+    intervalModifier: number; // Modifies base interval, starts at 1.0, adjusts based on performance
     incorrectAnswerCount: number;
     nextReviewDate: number; // timestamp
     addedAt: number;

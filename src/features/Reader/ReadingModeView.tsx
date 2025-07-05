@@ -4,8 +4,8 @@ import { useSentenceAnalysis } from '../../hooks/useSentenceAnalysis.ts';
 import { useAnalyzeSentence } from '../../services/gemini.ts';
 import { AnalysisView } from './AnalysisView.tsx';
 import { ErrorComponent } from '../../components/ErrorComponent.tsx';
-import { AnalysisPlaceholder } from '../../components/AnalysisPlaceholder.tsx';
-import { ReadingModeHeader } from '../../components/ReadingModeHeader.tsx';
+import { AnalysisPlaceholder } from './components/AnalysisPlaceholder.tsx';
+import { ReadingModeHeader } from './components/ReadingModeHeader.tsx';
 import { FloatingNavButtons } from './components/FloatingNavButtons.tsx';
 
 
@@ -182,7 +182,7 @@ export const ReadingModeView = () => {
                             return <div className="text-center p-8 text-text-muted">End of text.</div>;
                         }
                         if (error) {
-                            return <ErrorComponent message={error.message} onRetry={reanalyze} />;
+                            return <ErrorComponent error={error} onRetry={reanalyze} />;
                         }
                         if (analysis) {
                             return (

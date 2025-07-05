@@ -1,4 +1,4 @@
-// ui/components/HotkeyLegend.tsx
+// src/features/Reader/components/HotkeyLegend.tsx
 import React from 'react';
 
 export const HotkeyLegend = () => (

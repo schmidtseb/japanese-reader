@@ -1,12 +1,9 @@
-
-
-
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { useAppData, View } from '../../contexts/index.ts';
 import { useSentenceAnalysis } from '../../hooks/useSentenceAnalysis.ts';
 import { AnalysisView } from './AnalysisView.tsx';
 import { ErrorComponent } from '../../components/ErrorComponent.tsx';
-import { AnalysisPlaceholder } from '../../components/AnalysisPlaceholder.tsx';
+import { AnalysisPlaceholder } from './components/AnalysisPlaceholder.tsx';
 
 export const ReaderView = () => {
     const { state, dispatch } = useAppData();
@@ -103,7 +100,7 @@ export const ReaderView = () => {
                                 return <div className="text-center p-8 text-text-muted md:h-full flex items-center justify-center">Select a sentence to begin.</div>;
                             }
                             if (error) {
-                                return <ErrorComponent message={error.message} onRetry={reanalyze} />;
+                                return <ErrorComponent error={error} onRetry={reanalyze} />;
                             }
                             if (analysis) {
                                 return <AnalysisView analysis={analysis} onReanalyze={reanalyze} />;

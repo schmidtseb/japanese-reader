@@ -1,8 +1,8 @@
-// ui/components/GrammarNote.tsx
+// src/features/Reader/components/GrammarNote.tsx
 import React, { useState } from 'react';
 import { AddToDeckButton } from './AddToDeckButton.tsx';
-import { Furigana } from './Furigana.tsx';
-import { useGetExampleSentences } from '../services/gemini.ts';
+import { Furigana } from '../../../components/Furigana.tsx';
+import { useGetExampleSentences } from '../../../services/gemini.ts';
 
 export function GrammarNote({ pattern, onNoteClick, isFocused }: { pattern: any, onNoteClick: (pattern: any) => void, isFocused: boolean }) {
     const { isLoading, error, data, execute: getExampleSentences } = useGetExampleSentences();
@@ -20,8 +20,14 @@ export function GrammarNote({ pattern, onNoteClick, isFocused }: { pattern: any,
 
     const itemId = `grammar-${pattern.pattern_name}`;
     const constituentText = (pattern.constituent_indices || [])
-        .map((index: number) => pattern.fullAnalysis.analysis[index].japanese_segment)
+        .map((index: number) => {
+            // Defensive check: Ensure the segment exists before accessing its properties.
+            const segment = pattern.fullAnalysis.analysis[index];
+            return segment ? segment.japanese_segment : null;
+        })
+        .filter(Boolean) // Remove any nulls from invalid indices
         .join('');
+
     const patternContent = {
         pattern_name: pattern.pattern_name,
         explanation: pattern.explanation,
@@ -35,7 +41,10 @@ export function GrammarNote({ pattern, onNoteClick, isFocused }: { pattern: any,
             data-pattern-id={pattern.idClass}
             onClick={() => onNoteClick(pattern)}
         >
-            <span className={`flex-shrink-0 w-1.5 rounded-full bg-pattern-${pattern.colorIndex}`}></span>
+            <span
+              className="flex-shrink-0 w-1.5 rounded-full"
+              style={{ backgroundColor: pattern.color }}
+            ></span>
             <div className="flex-grow">
                 <strong className="font-semibold text-accent">{pattern.pattern_name}</strong>
                 <p className="text-sm text-text-muted mt-1">{pattern.explanation}</p>

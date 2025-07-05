@@ -309,16 +309,16 @@ This is a static single-page application. The deployment strategy remains unchan
 
 ## 8. Crosscutting Concepts
 
-| Concept                 | Implementation Strategy                                                                                                                                                                                                            |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **State Management**    | Implemented via React Context API. `AppDataProvider`, `SettingsProvider`, and `UIProvider` are wrapped around the root `App` component in `index.tsx`, making state globally accessible.                                           |
-| **API Communication**   | Centralized in `src/services/gemini.ts`. A reusable `useApiCall` hook abstracts the boilerplate of handling loading, error, and data states for any API call.                                                                     |
-| **Persistence**         | Handled by a dedicated service at **`src/services/db.ts`**. This service wraps all IndexedDB operations. Context reducers call functions from this service to asynchronously persist state changes.                                     |
-| **Error Handling**      | API errors are caught in the `useApiCall` hook and exposed to the UI. The `ErrorComponent` is a reusable component to display these errors to the user with a retry option. DB errors are logged to the console.                   |
-| **Styling & Theming**   | A global stylesheet (`index.html`'s `<style>` block) defines CSS variables for the color palette. The `dark` class on the `<html>` element toggles between light and dark themes. Tailwind CSS is used for component-level styling. |
-| **Hotkeys**             | A `useHotkeys` custom hook contains a `useEffect` that attaches a global `keydown` event listener. It dispatches actions to the appropriate context based on the current `view`.                                                     |
-| **Responsiveness**      | Achieved via Tailwind's responsive prefixes (e.g., `md:`, `sm:`) and conditional rendering of components based on screen size (e.g., using `BottomSheet` on mobile vs. `Tooltip` on desktop).                                       |
-| **Testing**             | Unit tests are implemented using **Vitest**. Critical business logic in the service layer (`srs.ts`, `db.ts`) and state management (`appDataContext` reducer) is tested. `fake-indexeddb` is used to mock the database for testing the persistence layer. |
+| Concept                 | Implementation Strategy                                                                                                                                                                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **State Management**    | Implemented via React Context API. `AppDataProvider`, `SettingsProvider`, and `UIProvider` are wrapped around the root `App` component in `index.tsx`, making state globally accessible.                                                                                                                         |
+| **API Communication**   | Centralized in `src/services/gemini.ts`. A reusable `useApiCall` hook abstracts the boilerplate of handling loading, error, and data states for any API call.                                                                                                                                                      |
+| **Persistence**         | Handled by a dedicated service at **`src/services/db.ts`**. This service wraps all IndexedDB operations. Context reducers call functions from this service to asynchronously persist state changes.                                                                                                                |
+| **Error Handling**      | API errors are caught in the `useApiCall` hook and exposed to the UI. The `ErrorComponent` is a reusable component to display these errors to the user with a retry option. DB errors are logged to the console.                                                                                                  |
+| **Styling & Theming**   | A global stylesheet (`index.html`'s `<style>` block) defines CSS variables for the main color palette. The `dark` class on the `<html>` element toggles between light and dark themes. Tailwind CSS is used for component-level styling. Some dynamic styles, like grammar pattern highlights, are generated in JavaScript to ensure uniqueness and are applied inline. |
+| **Hotkeys**             | A `useHotkeys` custom hook contains a `useEffect` that attaches a global `keydown` event listener. It dispatches actions to the appropriate context based on the current `view`.                                                                                                                                   |
+| **Responsiveness**      | Achieved via Tailwind's responsive prefixes (e.g., `md:`, `sm:`) and conditional rendering of components based on screen size (e.g., using `BottomSheet` on mobile vs. `Tooltip` on desktop).                                                                                                                     |
+| **Testing**             | Unit tests are implemented using **Vitest**. Critical business logic in the service layer (`srs.ts`, `db.ts`) and state management (`appDataContext` reducer) is tested. `fake-indexeddb` is used to mock the database for testing the persistence layer.                                                            |
 
 ---
 
@@ -364,8 +364,7 @@ See Section 1.2 for a table-based view. In summary:
 
 ### Technical Debt
 
--   **Limited Test Coverage**: While unit tests cover critical business logic (SRS, DB, state reducer) and some key UI components (`EditorView`), test coverage for other UI components and complex user interaction flows (e.g., `ReadingModeView`, `ReviewController`) remains low. This means some regressions in the UI or component interactions may not be caught automatically.
--   **SRS Algorithm Rigidity:** The custom SRS algorithm in `srs.ts` is based on fixed intervals. More advanced systems use dynamic intervals based on performance, which could provide better learning outcomes.
+-   **UI Interaction Testing**: While unit tests now cover critical business logic and major UI components including `EditorView`, `ReadingModeView`, and `ReviewController`, coverage for complex user interaction flows (e.g., fine-grained gesture interactions, complex focus management in hotkeys) could still be enhanced. Most regressions in component logic and data flow should now be caught automatically.
 
 ---
 

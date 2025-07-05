@@ -17,3 +17,26 @@ export function getCategoryClass(category: string): string {
     };
     return classMap[cat] || classMap.unknown;
 }
+
+/**
+ * Generates a visually distinct color for a grammar pattern based on its index.
+ * Uses the golden angle to ensure generated colors are well-spaced on the color wheel.
+ * @param index The index of the pattern.
+ * @param theme The current theme ('light' or 'dark').
+ * @returns An HSL color string (e.g., 'hsl(137.5, 70%, 45%)').
+ */
+export function getPatternColor(index: number, theme: 'light' | 'dark'): string {
+    const hue = (index * 137.5) % 360;
+    
+    if (theme === 'dark') {
+        // For dark mode, we want lighter, less saturated colors to stand out
+        const saturation = 65;
+        const lightness = 60;
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+    
+    // For light mode, we want richer, slightly darker colors
+    const saturation = 70;
+    const lightness = 45;
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
