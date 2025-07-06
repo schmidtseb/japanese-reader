@@ -1,12 +1,11 @@
 const CACHE_NAME = 'japanese-analyzer-cache-v2';
-const BASE_PATH = '/japanese-reader'; // From vite.config.js base
-const APP_SHELL_URL = `${BASE_PATH}/`; // The main URL for the app shell
+const APP_SHELL_URL = './'; // The main URL for the app shell
 
 const urlsToCache = [
   APP_SHELL_URL,
-  `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/manifest.json`,
-  `${BASE_PATH}/icon.svg`,
+  './index.html',
+  './manifest.json',
+  './icon.svg',
 ];
 
 self.addEventListener('install', (event) => {
