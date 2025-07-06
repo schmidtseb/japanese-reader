@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { 
     useAppData, 
     useSettings,
@@ -17,11 +17,11 @@ import { Tooltip } from './components/Tooltip.tsx';
 import { BottomSheet } from './components/BottomSheet.tsx';
 import { JumpButton } from './components/JumpButton.tsx';
 
-// Direct, static imports for development/sandbox environments
-import EditorView from './features/Editor/EditorView.tsx';
-import ReaderView from './features/Reader/ReaderView.tsx';
-import ReadingModeView from './features/Reader/ReadingModeView.tsx';
-import ReviewController from './features/Review/ReviewController.tsx';
+// Lazy-load the main views
+const EditorView = lazy(() => import('./features/Editor/EditorView.tsx'));
+const ReaderView = lazy(() => import('./features/Reader/ReaderView.tsx'));
+const ReadingModeView = lazy(() => import('./features/Reader/ReadingModeView.tsx'));
+const ReviewController = lazy(() => import('./features/Review/ReviewController.tsx'));
 
 function Header() {
   const { state, dispatch } = useAppData();
@@ -86,6 +86,15 @@ function Header() {
   );
 }
 
+const ViewLoader = () => (
+    <div className="w-full h-full flex items-center justify-center bg-surface">
+      <div className="text-center">
+        <i className="bi bi-arrow-repeat text-4xl text-text-muted animate-spin"></i>
+        <p className="mt-4 text-text-muted">Loading view...</p>
+      </div>
+    </div>
+);
+
 export default function App() {
   const { state: appDataState } = useAppData();
   const { state: settingsState } = useSettings();
@@ -128,7 +137,9 @@ export default function App() {
     <div className={`w-full h-full flex flex-col ${isReadingMode ? '' : 'md:container md:mx-auto md:px-4 md:py-6'}`}>
       <main id="app" className={`bg-surface w-full flex-grow flex flex-col min-h-0 ${isReadingMode ? '' : 'md:rounded-2xl md:shadow-xl md:border border-border md:overflow-hidden'}`}>
         {appDataState.view !== View.ReadingMode && <Header />}
-        {renderView()}
+        <Suspense fallback={<ViewLoader />}>
+            {renderView()}
+        </Suspense>
       </main>
       <HistoryPanel />
       <Tooltip />

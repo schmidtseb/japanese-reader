@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 import { useAppData, View, TextEntry, useSettings } from '../../contexts/index.ts';
 import { useModal } from '../../components/Modal.tsx';
@@ -11,7 +12,7 @@ const UNSAVED_TEXT_KEY = 'unsaved-text';
 
 type ActiveTab = 'manual' | 'url';
 
-export function EditorView() {
+export default function EditorView() {
     const { state, dispatch } = useAppData();
     const { state: settingsState } = useSettings();
     const { showAlert } = useModal();

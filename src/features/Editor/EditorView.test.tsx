@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { screen, fireEvent, render, waitFor } from '@testing-library/react';
-import { EditorView } from './EditorView';
+import EditorView from './EditorView';
 import { AppDataProvider, AppDataState, SettingsProvider, SettingsState, UIProvider, View, TextEntry } from '../../contexts';
 import { ModalProvider } from '../../components/Modal.tsx';
 import * as db from '../../services/db.ts';

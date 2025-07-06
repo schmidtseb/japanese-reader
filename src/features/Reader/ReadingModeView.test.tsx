@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { screen, fireEvent, render, waitFor } from '@testing-library/react';
 import { AppDataProvider, AppDataState, SettingsProvider, SettingsState, UIProvider, View, TextEntry } from '../../contexts';
 import { ModalProvider } from '../../components/Modal.tsx';
-import { ReadingModeView } from './ReadingModeView';
+import ReadingModeView from './ReadingModeView';
 import { useSentenceAnalysis } from '../../hooks/useSentenceAnalysis.ts';
 
 // Mock the analysis hook, as it makes external API calls

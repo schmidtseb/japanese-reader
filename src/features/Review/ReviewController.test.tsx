@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { screen, fireEvent, render, waitFor } from '@testing-library/react';
 import { AppDataProvider, AppDataState, SettingsProvider, SettingsState, UIProvider, View, ReviewItem } from '../../contexts';
 import { ModalProvider } from '../../components/Modal.tsx';
-import { ReviewController } from './ReviewController';
+import ReviewController from './ReviewController';
 
 // Mock child components that are not the focus of the test, to simplify rendering and assertions
 vi.mock('./components/ReviewCard.tsx', () => ({ ReviewCard: ({item, onExit}: any) => <div><span>ReviewCard for {item.id}</span> <button onClick={onExit}>Exit</button></div> }));

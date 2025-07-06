@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "mv src/App.tsx src/App.dev.tsx && mv src/App.prod.tsx src/App.tsx",
     "build": "vite build",
+    "postbuild": "mv src/App.tsx src/App.prod.tsx && mv src/App.dev.tsx src/App.tsx",
     "preview": "vite preview",
-    "predeploy": "vite build",
+    "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "test": "vitest"
   },

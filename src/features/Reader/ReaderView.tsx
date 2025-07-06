@@ -5,7 +5,7 @@ import { AnalysisView } from './AnalysisView.tsx';
 import { ErrorComponent } from '../../components/ErrorComponent.tsx';
 import { AnalysisPlaceholder } from './components/AnalysisPlaceholder.tsx';
 
-export const ReaderView = () => {
+const ReaderView = () => {
     const { state, dispatch } = useAppData();
     const currentEntry = state.history.find(e => e.id === state.currentTextEntryId);
     const { analysis, isLoading, error, reanalyze } = useSentenceAnalysis(currentEntry?.id, state.selectedSentence);
@@ -113,3 +113,4 @@ export const ReaderView = () => {
         </div>
     );
 };
+export default ReaderView;

@@ -9,7 +9,7 @@ import { ReadingModeHeader } from './components/ReadingModeHeader.tsx';
 import { FloatingNavButtons } from './components/FloatingNavButtons.tsx';
 
 
-export const ReadingModeView = () => {
+const ReadingModeView = () => {
     const { state: appDataState, dispatch: appDataDispatch } = useAppData();
     const { state: settingsState } = useSettings();
     const { dispatch: uiDispatch } = useUI();
@@ -190,3 +190,5 @@ export const ReadingModeView = () => {
         </div>
     );
 };
+
+export default ReadingModeView;
