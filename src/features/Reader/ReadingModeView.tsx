@@ -113,19 +113,10 @@ export const ReadingModeView = () => {
         }
 
         if (duration < 250 && Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
-            const tapPosition = endX / window.innerWidth;
-            if (isFloatingNavVisible) {
-                if (tapPosition < 0.25) {
-                    handleNav('prev');
-                } else if (tapPosition > 0.75) {
-                    handleNav('next');
-                } else {
-                    handleActivity(); // Tap in middle zone is activity.
-                }
-            } else {
-                // If nav is not visible, any tap is just an activity to show it.
-                handleActivity();
-            }
+            // A tap anywhere on the screen is now just considered activity to show the controls.
+            // The tap-to-navigate zones are removed as requested to prevent interfering
+            // with buttons in the view.
+            handleActivity();
             return;
         }
     };

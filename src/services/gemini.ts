@@ -1,4 +1,5 @@
 
+
 import { useState, useCallback } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { getSystemPrompt, getExampleSentenceSystemPrompt, getArticleExtractionPrompt } from '../utils/prompts.ts';
@@ -105,30 +106,68 @@ const getExampleSentencesApi = async (patternName: string) => {
 };
 
 export const extractTextFromUrl = async (url: string): Promise<{ title: string; japanese_text: string }> => {
-    let htmlContent: string;
-    // Using a free, public CORS proxy to bypass browser security restrictions for client-side fetching.
-    // This is a workaround to enable the feature without a dedicated backend.
-    // This public proxy may be unreliable or have rate limits. A dedicated backend is the robust solution for production.
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    let htmlContent: string = '';
+
+    // List of proxies to try in order. They have different URL structures.
+    const proxies = [
+        (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        (u: string) => `https://corsproxy.io/?${u}`,
+    ];
     
-    try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch via proxy with status: ${response.status}`);
-        }
-        htmlContent = await response.text();
+    const TIMEOUT_MS = 15000; // 15 seconds per proxy attempt
+    let lastError: Error | null = null;
 
-        // The proxy might return a 200 OK with an error message in the body if the target site fails
-        if (!htmlContent || htmlContent.trim() === '' || (htmlContent.includes('error') && htmlContent.length < 500)) {
-            throw new Error('Retrieved empty or invalid content from the URL.');
-        }
+    for (const proxyFn of proxies) {
+        const proxyUrl = proxyFn(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    } catch (e) {
-        console.error("Error fetching URL content via proxy:", e);
-        // Consolidate error messages for user-friendliness
-        throw new Error("Could not retrieve content from the URL. The website might be down, blocking automated access, or the URL is incorrect.");
+        try {
+            const response = await fetch(proxyUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                if (response.status === 408 || response.status === 504) {
+                    throw new Error("Proxy timed out waiting for the target website.");
+                }
+                if (response.status === 404) {
+                    throw new Error("The requested URL was not found (404). Please check the URL.");
+                }
+                if (response.status === 403) {
+                    throw new Error("Access to this website is forbidden (403). It may be blocking access.");
+                }
+                if (response.status >= 500) {
+                    throw new Error("The website's server encountered an error. Please try again later.");
+                }
+                throw new Error(`Failed to fetch content (status: ${response.status}).`);
+            }
+            
+            const content = await response.text();
+            if (!content || content.trim() === '') {
+                throw new Error('Retrieved empty content. The page might be protected or require JavaScript.');
+            }
+            
+            htmlContent = content;
+            lastError = null; // Success, clear last error
+            break; // Exit loop on success
+
+        } catch (e) {
+            clearTimeout(timeoutId);
+            const proxyHost = new URL(proxyUrl).hostname;
+            console.warn(`Proxy ${proxyHost} failed. Trying next...`, e);
+            lastError = e instanceof Error ? e : new Error('An unknown fetch error occurred');
+            if (lastError.name === 'AbortError') {
+                 // Make the timeout error more user-friendly
+                lastError = new Error(`The request to ${proxyHost} timed out.`);
+            }
+        }
     }
-
+    
+    // If after trying all proxies, we still have no content, throw the last known error.
+    if (!htmlContent) {
+        throw new Error(`Failed to fetch from all proxies. Last error: ${lastError?.message || 'Unknown issue.'}`);
+    }
+    
     const ai = await getGenAI();
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-04-17',
