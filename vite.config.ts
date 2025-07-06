@@ -1,7 +1,7 @@
 
+
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
       build: {
         rollupOptions: {
           // Use index.prod.html as the entry point for production builds
-          input: isProduction ? resolve(__dirname, 'index.prod.html') : undefined,
+          input: isProduction ? 'index.prod.html' : undefined,
         },
       },
       define: {

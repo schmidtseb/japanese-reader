@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppData, useUI, View, TextEntry } from '../contexts/index.ts';
 import { useModal } from './Modal.tsx';
 
-function HistoryItem({ entry }: { entry: TextEntry }) {
+const HistoryItem: React.FC<{ entry: TextEntry }> = ({ entry }) => {
     const { dispatch: appDataDispatch } = useAppData();
     const { dispatch: uiDispatch } = useUI();
     const { showConfirmation } = useModal();

@@ -1,5 +1,5 @@
 // src/features/Review/components/ReviewCard.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FC } from 'react';
 import { Furigana } from '../../../components/Furigana.tsx';
 import { ReviewItem, ReviewQuality } from '../../../contexts/index.ts';
 import { WordQuizType } from '../ReviewController.tsx';
@@ -13,7 +13,13 @@ const ReviewExitButton = ({ onExit }: { onExit: () => void }) => (
     </div>
 );
 
-const GrammarReviewCard = ({ item, onReview, cardKey }: { item: ReviewItem, onReview: (quality: ReviewQuality) => void, cardKey: number }) => {
+interface GrammarReviewCardProps {
+    item: ReviewItem;
+    onReview: (quality: ReviewQuality) => void;
+    cardKey: number;
+}
+
+const GrammarReviewCard: FC<GrammarReviewCardProps> = ({ item, onReview, cardKey }) => {
     const { content } = item;
     const [showAnswer, setShowAnswer] = useState(false);
     

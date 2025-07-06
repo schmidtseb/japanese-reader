@@ -11,7 +11,6 @@ interface InteractiveWordCardProps {
     item: ReviewItem;
     quizType: WordQuizType;
     onComplete: (isCorrect: boolean) => void;
-    // The `cardKey` prop is no longer needed. The `key` attribute on the component instance handles the reset.
 }
 
 const cardDetails: Record<WordQuizType, {
@@ -37,7 +36,7 @@ const cardDetails: Record<WordQuizType, {
     },
 };
 
-export const InteractiveWordCard = ({ item, quizType, onComplete }: InteractiveWordCardProps) => {
+export const InteractiveWordCard: React.FC<InteractiveWordCardProps> = ({ item, quizType, onComplete }) => {
     // Because the component is re-mounted with a key, these states will always be fresh.
     const [inputValue, setInputValue] = useState('');
     const [showResult, setShowResult] = useState(false);

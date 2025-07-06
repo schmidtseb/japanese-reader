@@ -1,5 +1,5 @@
 // src/features/Review/components/LearningQuizCard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, FC } from 'react';
 import { ReviewItem } from '../../../contexts/index.ts';
 import { WordQuizType } from '../ReviewController.tsx';
 import { InteractiveWordCard } from './InteractiveWordCard.tsx';
@@ -12,7 +12,13 @@ interface LearningQuizCardProps {
     cardKey: number;
 }
 
-const GrammarQuiz = ({ item, onAnswer, cardKey }: { item: ReviewItem, onAnswer: (remembered: boolean) => void, cardKey: number }) => {
+interface GrammarQuizProps {
+    item: ReviewItem;
+    onAnswer: (remembered: boolean) => void;
+    cardKey: number;
+}
+
+const GrammarQuiz: FC<GrammarQuizProps> = ({ item, onAnswer, cardKey }) => {
     const [showAnswer, setShowAnswer] = useState(false);
 
     useEffect(() => {

@@ -14,6 +14,7 @@ This project is a feature-rich, client-side single-page application built with R
 -   **Customizable Experience**: Includes light and dark themes, adjustable font sizes, and toggles for UI elements like furigana and pitch accent.
 -   **Local Persistence**: All your saved texts, analysis history, and review progress are saved securely in your browser's IndexedDB.
 -   **Data Management**: Import and export your entire application data (history, settings, review deck) as a JSON file.
+-   **PWA & Offline Ready**: Install the app on your device and access your saved data even without an internet connection.
 
 ## 🤖 AI-Assisted Development
 This application was developed with the assistance of a large language model from Google. The AI contributed to the overall architecture, component creation, feature implementation, and bug fixing, working collaboratively to build a functional and robust tool.

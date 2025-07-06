@@ -4,7 +4,7 @@ import { ReviewItem } from '../../../contexts/index.ts';
 import { Furigana } from '../../../components/Furigana.tsx';
 import { PitchAccentVisualizer } from '../../../components/PitchAccentVisualizer.tsx';
 
-const DeckManagerItem = ({ item, onDelete }: { item: ReviewItem, onDelete: (id: string) => void }) => {
+const DeckManagerItem: React.FC<{ item: ReviewItem, onDelete: (id: string) => void }> = ({ item, onDelete }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
     
     let contentPreview, detailsHTML;

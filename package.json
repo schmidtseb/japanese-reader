@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node -e \"require('fs').renameSync('dist/index.prod.html', 'dist/index.html')\"",
     "preview": "vite preview",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d dist",

@@ -87,7 +87,7 @@ const SettingsContext = createContext<{ state: SettingsState; dispatch: Dispatch
 });
 
 interface SettingsProviderProps {
-    children: React.ReactNode;
+    children?: React.ReactNode;
     _testState?: SettingsState;
 }
 

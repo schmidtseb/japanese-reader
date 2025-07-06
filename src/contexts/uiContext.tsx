@@ -72,7 +72,7 @@ const UIContext = createContext<{ state: UIState; dispatch: Dispatch<Action> }>(
     dispatch: () => null
 });
 
-export function UIProvider({ children }: { children: React.ReactNode }) {
+export function UIProvider({ children }: { children?: React.ReactNode }) {
     const [state, dispatch] = useReducer(uiReducer, initialState);
     return (
         <UIContext.Provider value={{ state, dispatch }}>

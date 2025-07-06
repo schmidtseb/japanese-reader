@@ -269,7 +269,7 @@ const AppDataContext = createContext<{ state: AppDataState; dispatch: Dispatch<A
 });
 
 interface AppDataProviderProps {
-    children: React.ReactNode;
+    children?: React.ReactNode;
     _testDispatch?: Dispatch<AppDataAction>;
     _testState?: AppDataState;
 }
