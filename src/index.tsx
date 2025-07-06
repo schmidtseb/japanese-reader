@@ -32,7 +32,7 @@ root.render(<Main />);
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // Vite will handle the path correctly during the build process
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/japanese-reader/sw.js')
       .then(registration => {
         console.log('ServiceWorker registration successful with scope: ', registration.scope);
       })
