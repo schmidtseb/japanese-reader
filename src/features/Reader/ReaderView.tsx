@@ -47,9 +47,9 @@ export const ReaderView = () => {
     return (
         <div className="flex-grow min-h-0 overflow-y-auto md:grid md:grid-cols-2 md:overflow-hidden">
             {/* Left Pane: Text Content. Uses Grid on desktop for robust scrolling. */}
-            <div className="p-6 flex flex-col md:h-full md:grid md:grid-rows-[auto_1fr] md:gap-y-4">
+            <div className="p-6 flex flex-col md:h-full md:grid md:grid-rows-[auto_1fr] md:gap-y-4 md:min-w-0">
                 <div className="flex justify-between items-center mb-4 md:mb-0">
-                    <h2 className="text-xl font-bold text-text-primary truncate" title={currentEntry.title}>{currentEntry.title}</h2>
+                    <h2 className="text-xl font-bold text-text-primary break-words" title={currentEntry.title}>{currentEntry.title}</h2>
                     <div className="flex items-center gap-2">
                          <button onClick={handleEdit} title="Edit Text" className="btn-ghost">
                             <i className="bi bi-pencil-square text-xl"></i>
@@ -92,7 +92,7 @@ export const ReaderView = () => {
                 </div>
             </div>
              {/* Right Pane: Analysis. This entire pane will scroll on desktop. */}
-            <div className="md:h-full md:overflow-y-auto no-scrollbar md:border-l border-border">
+            <div className="md:h-full md:overflow-y-auto no-scrollbar md:border-l border-border md:min-w-0">
                 <div className="p-6 md:h-full">
                     <div id="analysis-view" className="md:h-full">
                         {(() => {

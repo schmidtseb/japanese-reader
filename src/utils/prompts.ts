@@ -62,3 +62,22 @@ If the user input is "〜について" and a sentence is "日本の文化につ�
 
 Respond ONLY with a JSON object that adheres to the provided schema. Do not add any extra text or markdown fences.`;
 }
+
+
+/**
+ * Creates a system prompt for extracting article content from raw HTML.
+ * @returns A system prompt string.
+ */
+export function getArticleExtractionPrompt(): string {
+    return `You are an expert web content extraction model. You will be given the full raw HTML of a webpage.
+Your task is to perform the following actions:
+1.  Identify the main article or content body of the HTML. Ignore navigation menus, sidebars, advertisements, footers, comment sections, and other boilerplate content.
+2.  Extract the main title of the article from elements like \`<title>\` or \`<h1>\`.
+3.  Extract the full text of the article.
+4.  The extracted text MUST be in Japanese. If the main content is not in Japanese, you must treat it as if no content was found.
+5.  Clean the extracted text by removing any remaining HTML tags and unnecessary whitespace, presenting it as clean paragraphs separated by single newline characters.
+
+You must respond ONLY with a JSON object that adheres to the specified schema.
+If no valid Japanese article text can be found on the page, the 'japanese_text' field in your JSON response must be an empty string. The 'title' can still be populated if found.
+`;
+}

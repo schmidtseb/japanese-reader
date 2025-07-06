@@ -110,3 +110,18 @@ export const EXAMPLE_SENTENCES_SCHEMA = {
       required: ["japanese", "reading", "english", "highlight_indices"]
   }
 };
+
+export const ARTICLE_EXTRACTION_SCHEMA = {
+    type: "OBJECT",
+    properties: {
+        title: {
+            type: "STRING",
+            description: "The extracted main title of the article. Should be an empty string if no title is found."
+        },
+        japanese_text: {
+            type: "STRING",
+            description: "The extracted and cleaned main Japanese text of the article, formatted with paragraphs separated by newlines. Should be an empty string if no Japanese article is found."
+        }
+    },
+    required: ["title", "japanese_text"]
+};

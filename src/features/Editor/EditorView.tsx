@@ -1,11 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import { useAppData, View, TextEntry, useSettings } from '../../contexts/index.ts';
 import { useModal } from '../../components/Modal.tsx';
 import * as db from '../../services/db.ts';
 import { AnalysisDepth } from '../../contexts/settingsContext.tsx';
+import { extractTextFromUrl } from '../../services/gemini.ts';
 
 const UNSAVED_TITLE_KEY = 'unsaved-title';
 const UNSAVED_TEXT_KEY = 'unsaved-text';
+
+type ActiveTab = 'manual' | 'url';
 
 export function EditorView() {
     const { state, dispatch } = useAppData();
@@ -14,6 +18,12 @@ export function EditorView() {
     const [title, setTitle] = useState('');
     const [text, setText] = useState('');
     const [isLoaded, setIsLoaded] = useState(false);
+    
+    const [url, setUrl] = useState('');
+    const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+    const [fetchUrlError, setFetchUrlError] = useState<string | null>(null);
+
+    const [activeTab, setActiveTab] = useState<ActiveTab>('manual');
 
     const isApiKeySet = !!process.env.API_KEY || !!settingsState.userApiKey;
     const editingEntry = state.editingEntryId ? state.history.find(e => e.id === state.editingEntryId) : null;
@@ -23,6 +33,7 @@ export function EditorView() {
             if (editingEntry) {
                 setTitle(editingEntry.title);
                 setText(editingEntry.text);
+                setActiveTab('manual'); // When editing, always start on manual tab
             } else {
                 const savedTitle = await db.getTransientState(UNSAVED_TITLE_KEY) || '';
                 const savedText = await db.getTransientState(UNSAVED_TEXT_KEY) || '';
@@ -46,6 +57,34 @@ export function EditorView() {
             db.setTransientState(UNSAVED_TEXT_KEY, text);
         }
     }, [text, editingEntry, isLoaded]);
+
+    const handleFetchUrl = async () => {
+        setFetchUrlError(null);
+        if (!url) {
+            setFetchUrlError("Please enter a URL.");
+            return;
+        }
+        try {
+            // Basic client-side validation
+            new URL(url);
+        } catch (_) {
+            setFetchUrlError("Invalid URL format.");
+            return;
+        }
+
+        setIsFetchingUrl(true);
+        try {
+            const result = await extractTextFromUrl(url);
+            setTitle(result.title);
+            setText(result.japanese_text);
+            setUrl('');
+            setActiveTab('manual'); // Switch to manual tab to show populated fields
+        } catch (err) {
+            setFetchUrlError((err as Error).message);
+        } finally {
+            setIsFetchingUrl(false);
+        }
+    };
 
     const handleAnalyze = () => {
         if (!isApiKeySet) {
@@ -98,37 +137,107 @@ export function EditorView() {
             dispatch({ type: 'SET_VIEW', payload: View.Reader });
         }
     };
+    
+    const tabBaseClass = "px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-t-lg";
+    const activeTabClass = "border-b-2 border-primary text-primary";
+    const inactiveTabClass = "text-text-muted hover:text-text-primary hover:bg-surface-hover";
 
     return (
-        <div className="h-screen md:h-auto input-area p-6 bg-gradient-to-b from-background/50 to-surface">
-            <div className="space-y-4">
-                <div>
-                    <label htmlFor="text-title-input" className="block text-sm font-medium text-text-secondary mb-2">
-                        Title
-                    </label>
-                    <input
-                        type="text"
-                        id="text-title-input"
-                        placeholder="Enter a title for your text..."
-                        className="w-full rounded-xl border-border-subtle bg-surface shadow-sm focus-ring text-lg font-medium px-4 py-3"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                    />
+        <div className="h-screen md:h-auto input-area p-6 bg-gradient-to-b from-background/50 to-surface overflow-y-auto no-scrollbar flex flex-col">
+            <div className="space-y-6 flex-grow flex flex-col">
+                {/* Tabs */}
+                <div className="border-b border-border-subtle flex-shrink-0">
+                    <nav className="-mb-px flex space-x-4" aria-label="Tabs">
+                        <button
+                            onClick={() => setActiveTab('manual')}
+                            className={`${tabBaseClass} ${activeTab === 'manual' ? activeTabClass : inactiveTabClass}`}
+                            aria-current={activeTab === 'manual' ? 'page' : undefined}
+                        >
+                            Manual Input
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('url')}
+                            className={`${tabBaseClass} ${activeTab === 'url' ? activeTabClass : inactiveTabClass}`}
+                            aria-current={activeTab === 'url' ? 'page' : undefined}
+                        >
+                            Import from URL
+                        </button>
+                    </nav>
                 </div>
-                <div>
-                    <label htmlFor="sentence-input" className="block text-sm font-medium text-text-secondary mb-2">
-                        Japanese Text
-                    </label>
-                    <textarea
-                        id="sentence-input"
-                        placeholder="Enter Japanese text here. e.g., 猫が大好きです。犬も好きです。"
-                        rows={6}
-                        className="w-full rounded-xl border-border-subtle bg-surface shadow-sm focus-ring text-base px-4 py-3 font-japanese resize-none transition-all duration-200"
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                    />
+
+                {/* Tab Content */}
+                <div className="flex-grow min-h-0 py-2">
+                    {activeTab === 'manual' && (
+                        <div className="space-y-4 animate-fade-in">
+                             <div>
+                                <label htmlFor="text-title-input" className="block text-sm font-medium text-text-secondary mb-2">
+                                    Title
+                                </label>
+                                <input
+                                    type="text"
+                                    id="text-title-input"
+                                    placeholder="Enter a title for your text..."
+                                    className="w-full rounded-xl border-border-subtle bg-surface shadow-sm focus-ring text-lg font-medium px-4 py-3"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="sentence-input" className="block text-sm font-medium text-text-secondary mb-2">
+                                    Japanese Text
+                                </label>
+                                <textarea
+                                    id="sentence-input"
+                                    placeholder="Enter Japanese text here. e.g., 猫が大好きです。犬も好きです。"
+                                    rows={8}
+                                    className="w-full rounded-xl border-border-subtle bg-surface shadow-sm focus-ring text-base px-4 py-3 font-japanese resize-y transition-all duration-200"
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'url' && (
+                        <div className="space-y-4 animate-fade-in">
+                            <label htmlFor="url-input" className="block text-sm font-medium text-text-secondary">
+                                Paste article URL
+                            </label>
+                            <div className="flex items-start gap-2">
+                                <input
+                                    type="url"
+                                    id="url-input"
+                                    placeholder="https://example.com/japanese-article"
+                                    className="w-full rounded-xl border-border-subtle bg-surface shadow-sm focus-ring text-base px-4 py-3"
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleFetchUrl()}
+                                    disabled={isFetchingUrl}
+                                />
+                                 <button 
+                                    onClick={handleFetchUrl} 
+                                    disabled={isFetchingUrl || !url.trim()}
+                                    className="px-4 py-3 rounded-xl bg-accent text-primary-text font-medium hover:bg-accent/90 transition-colors shadow-sm focus-ring disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+                                    title="Fetch content from URL"
+                                >
+                                    {isFetchingUrl ? (
+                                        <i className="bi bi-arrow-repeat text-xl animate-spin"></i>
+                                    ) : (
+                                        <i className="bi bi-cloud-arrow-down text-xl"></i>
+                                    )}
+                                </button>
+                            </div>
+                            {fetchUrlError && (
+                                 <p className="text-sm text-destructive mt-1.5 px-2">
+                                    <i className="bi bi-exclamation-circle-fill mr-1 align-middle"></i>
+                                    {fetchUrlError}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
-                <div>
+
+                {/* Action Button */}
+                <div className="mt-auto flex-shrink-0 pt-4">
                     <button
                         onClick={handleAnalyze}
                         className="w-full btn-primary text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"

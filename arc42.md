@@ -1,4 +1,5 @@
 
+
 # Architecture Documentation: Japanese Sentence Analyzer
 
 **arc42 Template Version:** 9.0 (adapted for this project)
@@ -28,7 +29,7 @@ The application is a client-side tool designed for Japanese language learners. I
 | **Usability**     | The primary users are language learners. The interface must be intuitive, responsive, and helpful.           | Clean, component-based UI. Responsive design (e.g., BottomSheet on mobile, Tooltip on desktop). Hotkeys for power users. Clear visual hierarchy. Dark/Light themes. Adjustable font sizes.                |
 | **Performance**   | API calls can be slow and costly. The app must feel fast and responsive during use.                          | **Caching:** All sentence analyses from the Gemini API are cached in IndexedDB. **Prefetching:** In Reading Mode, the next sentence's analysis is fetched in the background. Lightweight state management.      |
 | **Maintainability** | The codebase must be easy to understand, modify, and extend over time.                                      | **TypeScript:** Enforces type safety. **Component-Based:** Code is modularized into React components. **Structured Code:** Code is organized by `features`, `services`, `contexts`, `hooks`, and `utils`. **Unit Tests** for core logic. |
-| **Offline Capability** | Users should be able to review their saved texts and analyses without an internet connection.                  | All user data, including cached analyses, is stored in **IndexedDB**, making previously viewed content available offline. New analyses require an internet connection.                                        |
+| **Offline Capability** | Users should be able to use the app interface and review their saved data without an internet connection. | All user data is stored in **IndexedDB**. A **Service Worker** caches all static assets (HTML, JS, CSS, icons), making the application shell fully available offline. New analyses still require an internet connection. |
 | **Configurability**| Users should be able to tailor the experience to their needs, including providing their own API keys.      | A comprehensive settings menu allows toggling UI features, adjusting learning parameters (e.g., new words per day), and managing the API key.                                                   |
 
 ### 1.3. Stakeholders
@@ -38,6 +39,25 @@ The application is a client-side tool designed for Japanese language learners. I
 | **Language Learner**  | (Primary User) Needs an accurate, fast, and easy-to-use tool to understand Japanese and practice vocabulary. |
 | **Developer**         | Needs a clean, well-structured, and maintainable codebase to fix bugs and add new features.               |
 | **App "Host"/Provider**| If deployed for public use, needs to manage API costs, potentially by requiring users to provide their own key. |
+
+### 1.4. Potential Future Features
+
+The current architecture provides a solid foundation for future enhancements. The following features are being considered for future development:
+
+#### Interactive Review Modes
+-   **Concept:** Evolve the current passive SRS review (Show/Grade) into an active recall system to increase user engagement and learning effectiveness.
+-   **Potential Implementations:**
+    -   **Meaning -> Japanese:** Show the English meaning and require the user to type the Japanese word.
+    -   **Reading -> Kanji:** Show the hiragana reading and require the user to type the word with correct kanji.
+    -   **Listening Comprehension:** Use the TTS service to speak a word and have the user type what they heard.
+-   **Architectural Impact:** This would primarily involve refactoring the `ReviewCard` component to support different modes and adding an input field. The core SRS logic in `srs.ts` would remain largely unchanged.
+
+#### Enhanced, In-App Kanji Analysis
+-   **Concept:** Instead of linking out to Jisho.org, provide detailed Kanji information directly within the app.
+-   **Potential Implementations:**
+    -   When a user clicks a Kanji, trigger a new Gemini API call specifically for that character.
+    -   Display stroke order diagrams, On'yomi/Kun'yomi readings, and example compounds in the `BottomSheet` (mobile) or `Tooltip` (desktop).
+-   **Architectural Impact:** Requires a new API call function in `gemini.ts` and updates to the `InteractiveKanji` component and the UI display components.
 
 ---
 
@@ -70,7 +90,7 @@ The system is a standalone web application. It interacts with one primary extern
 | **Language Learner** | Interacts with the UI to input text, review analyses, and manage their learning deck.   |
 | **Japanese Analyzer SPA** | Renders the UI, manages state, orchestrates API calls, and handles local persistence. |
 | **Google Gemini API**  | (External) Provides the core linguistic analysis based on prompts from the SPA.        |
-| **Browser APIs**     | (External) Provide **IndexedDB** for persistence and `SpeechSynthesis` for TTS.        |
+| **Browser APIs**     | (External) Provide **IndexedDB**, `SpeechSynthesis`, and **Service Workers**.        |
 
 ### Technical Context
 
@@ -91,6 +111,7 @@ The system is a standalone web application. It interacts with one primary extern
 -   **Vitest:** A modern unit testing framework chosen for its speed and seamless integration with Vite.
 -   **Google Gemini API (`@google/genai`):** The cornerstone of the application. Chosen for its advanced natural language understanding and its ability to return structured JSON, which is critical for parsing the analysis reliably.
 -   **IndexedDB:** Chosen as the primary persistence solution for its high storage capacity (much larger than `localStorage`), asynchronous API, and strong support for storing and querying structured data. This avoids the complexity and cost of a backend database, making the app easy to deploy as a static site.
+-   **PWA Technologies (Service Workers, Web App Manifest):** Chosen to provide offline access to the application shell and allow users to "install" the app on their devices for a more native-like experience.
 
 ### Key Architectural Decisions
 
@@ -99,6 +120,7 @@ The system is a standalone web application. It interacts with one primary extern
 -   **Hook-based Logic Abstraction:** Complex or reusable logic is encapsulated in custom hooks. `useSentenceAnalysis` abstracts the entire flow of fetching/caching analysis. `useHotkeys` centralizes keyboard shortcut management.
 -   **Feature-Driven Code Organization:** The `src/features` directory groups components and views by major application functionality (Editor, Reader, Review). This makes it easy to locate and work on a specific part of the application.
 -   **Schema-Defined API Payloads:** The application defines explicit JSON schemas (`src/utils/structured-output.ts`) that are sent to the Gemini API. This forces the model to return data in a predictable format, making the application robust against variations in the model's text generation.
+-   **Progressive Web App (PWA) Implementation:** The app is a PWA. A service worker (`sw.js`) is used to cache static application assets, enabling offline use of the app's shell. A `manifest.json` file provides metadata for installability ("Add to Home Screen"). This enhances reliability and user engagement.
 
 ---
 
@@ -119,7 +141,7 @@ graph TD
 
     subgraph External
         GeminiAPI[Google Gemini API]
-        BrowserAPIs[Browser APIs - IndexedDB]
+        BrowserAPIs[Browser APIs - IndexedDB, Service Worker]
     end
 
     UI --> State
@@ -158,7 +180,7 @@ graph TD
     
     subgraph "External Dependencies"
         GeminiAPI[Google Gemini API]
-        BrowserAPIs[Browser APIs: IndexedDB, Web Speech]
+        BrowserAPIs[Browser APIs: IndexedDB, Web Speech, Service Worker]
     end
 
     Features --> Components
@@ -250,20 +272,27 @@ sequenceDiagram
 ### Scenario 2: Application Cold Start
 
 1.  **User**: Opens the application.
-2.  **`App.tsx`**: Renders a loading indicator because the initial state of both `appDataContext` and `settingsContext` is `isLoading: true`.
-3.  **`SettingsProvider` `useEffect`**: Calls `db.initDB()`, then `db.getAllSettings()`. On success, it dispatches `INITIALIZE_SETTINGS_SUCCESS` with the retrieved settings. The settings state is updated, and `isLoading` becomes `false`.
-4.  **`AppDataProvider` `useEffect`**: Calls `db.initDB()`, then `db.getAllTextEntries()` and `db.getAllReviewItems()`. On success, it dispatches `INITIALIZE_DATA_SUCCESS` with the user's data. The app data state is updated, and `isLoading` becomes `false`.
-5.  **`App.tsx`**: Both `isLoading` flags are now false. The main application UI is rendered with the user's persisted data.
+2.  **Browser**: Makes a request for the main page.
+3.  **Service Worker**: (If installed on subsequent visits) Intercepts the request and serves the cached `index.html` and other static assets, allowing the app to load instantly even if offline.
+4.  **`App.tsx`**: Renders a loading indicator because the initial state of both `appDataContext` and `settingsContext` is `isLoading: true`.
+5.  **`SettingsProvider` `useEffect`**: Calls `db.initDB()`, then `db.getAllSettings()`. On success, it dispatches `INITIALIZE_SETTINGS_SUCCESS` with the retrieved settings. The settings state is updated, and `isLoading` becomes `false`.
+6.  **`AppDataProvider` `useEffect`**: Calls `db.initDB()`, then `db.getAllTextEntries()` and `db.getAllReviewItems()`. On success, it dispatches `INITIALIZE_DATA_SUCCESS` with the user's data. The app data state is updated, and `isLoading` becomes `false`.
+7.  **`App.tsx`**: Both `isLoading` flags are now false. The main application UI is rendered with the user's persisted data.
 
 ```mermaid
 sequenceDiagram
     participant User
+    participant Browser
+    participant ServiceWorker as "sw.js"
     participant App as "App.tsx"
     participant Providers as "Context Providers"
     participant DB as "db.ts"
     participant IndexedDB
 
-    User->>App: Opens application
+    User->>Browser: Opens application
+    Browser->>ServiceWorker: Request for assets
+    ServiceWorker->>Browser: Respond with cached assets
+    Browser->>App: Render application
     App->>App: Render Loading UI
     
     activate Providers
@@ -292,12 +321,13 @@ sequenceDiagram
 
 ## 7. Deployment View
 
-This is a static single-page application. The deployment strategy remains unchanged.
+This is a static single-page application.
 
 ### Build Process
 
 -   The command `npm run build` (invoking `vite build`) transpiles the TypeScript/React code, bundles all JavaScript modules, and outputs static HTML, CSS, and JS files into the `/dist` directory.
 -   The build process can inject environment variables (like `process.env.API_KEY`) into the code.
+-   The `public` directory, containing `sw.js`, `manifest.json`, and `icon.svg`, is copied to the root of the `/dist` directory.
 
 ### Deployment Infrastructure
 
@@ -314,6 +344,7 @@ This is a static single-page application. The deployment strategy remains unchan
 | **State Management**    | Implemented via React Context API. `AppDataProvider`, `SettingsProvider`, and `UIProvider` are wrapped around the root `App` component in `index.tsx`, making state globally accessible.                                                                                                                         |
 | **API Communication**   | Centralized in `src/services/gemini.ts`. A reusable `useApiCall` hook abstracts the boilerplate of handling loading, error, and data states for any API call.                                                                                                                                                      |
 | **Persistence**         | Handled by a dedicated service at **`src/services/db.ts`**. This service wraps all IndexedDB operations. Context reducers call functions from this service to asynchronously persist state changes.                                                                                                                |
+| **PWA / Offline**         | The app is installable via a `manifest.json` file. A service worker in `public/sw.js` implements a cache-first strategy for static assets, ensuring the application shell works offline. `index.tsx` contains the logic to register the service worker. |
 | **Error Handling**      | API errors are caught in the `useApiCall` hook and exposed to the UI. The `ErrorComponent` is a reusable component to display these errors to the user with a retry option. DB errors are logged to the console.                                                                                                  |
 | **Styling & Theming**   | A global stylesheet (`index.html`'s `<style>` block) defines CSS variables for the main color palette. The `dark` class on the `<html>` element toggles between light and dark themes. Tailwind CSS is used for component-level styling. Some dynamic styles, like grammar pattern highlights, are generated in JavaScript to ensure uniqueness and are applied inline. |
 | **Hotkeys**             | A `useHotkeys` custom hook contains a `useEffect` that attaches a global `keydown` event listener. It dispatches actions to the appropriate context based on the current `view`.                                                                                                                                   |
@@ -342,6 +373,12 @@ This is a static single-page application. The deployment strategy remains unchan
 -   **Rationale:** Gemini provides the necessary high-quality linguistic analysis. Forcing a JSON schema makes the application robust and reliable by ensuring the API response is always in a parsable format, preventing errors from free-form text responses.
 -   **Consequences:** The application is tightly coupled to the Gemini API. If the API changes or has downtime, the core functionality is impacted. The quality of analysis is entirely dependent on the quality of the AI model and the prompt.
 
+### ADR 4: Implementation as a Progressive Web App (PWA)
+
+-   **Decision:** Implement PWA features, including a service worker for asset caching and a web app manifest for installability.
+-   **Rationale:** This significantly improves the user experience by providing offline access to the application shell and allowing users to add the app to their home screen. It enhances the feeling of a native application without the overhead of building one. The cache-first strategy for static assets makes subsequent loads much faster.
+-   **Consequences:** Adds a layer of complexity related to service worker lifecycle and cache management. Developers need to be mindful of cache-busting strategies when deploying new versions to ensure users get updates.
+
 ---
 
 ## 10. Quality Requirements
@@ -360,7 +397,9 @@ See Section 1.2 for a table-based view. In summary:
 
 -   **API Key Exposure/Management:** A default API key embedded at build time could be extracted from the static JS files. The reliance on users providing their own key is a significant hurdle for non-technical users.
 -   **Gemini API Changes/Costs:** The application is tightly coupled to the Gemini API. Breaking changes in the API or its pricing model could render the app unusable or expensive.
+-   **CORS Restrictions:** The "Import from URL" feature relies on the target server having a permissive CORS policy. Many websites will block these client-side `fetch` requests, limiting the feature's utility. A full solution would require a server-side proxy, which is outside the project's current client-only scope.
 -   **IndexedDB Complexity:** While abstracted by `db.ts`, IndexedDB has complexities (e.g., versioning, transaction management) that can be a source of bugs if not handled carefully.
+-   **Service Worker Caching**: The current service worker uses a simple cache-first strategy. A more robust strategy might be needed in the future, and cache invalidation on new deployments can be tricky to get right, potentially leading to users being stuck on an old version of the app.
 
 ### Technical Debt
 
@@ -374,11 +413,14 @@ See Section 1.2 for a table-based view. In summary:
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Analysis**            | The structured JSON object returned by the Gemini API, detailing a sentence's linguistic properties.              |
 | **Context**               | Refers to the React Context API used for state management. The app has `AppData`, `Settings`, and `UI` contexts.    |
+| **CORS**                | Cross-Origin Resource Sharing. A browser security feature that restricts web pages from making requests to a different domain than the one that served the page. |
 | **Furigana**              | Hiragana readings placed above kanji characters.                                                                  |
 | **IndexedDB**             | A low-level browser API for client-side storage of significant amounts of structured data, including files/blobs. |
 | **Pitch Accent**          | The rise and fall of pitch in Japanese words, represented in the app by 'H' and 'L' strings.                       |
+| **PWA**                   | Progressive Web App. A web application that uses modern web capabilities to deliver an app-like experience to users. Features include offline work, installability, and push notifications. |
 | **Review Item**           | A single word or grammar point stored in the review deck for SRS.                                                   |
 | **Segment**               | A single morphological unit (word, particle) of a sentence as determined by the analysis.                         |
+| **Service Worker**        | A script that the browser runs in the background, separate from a web page, enabling features that don't need a web page or user interaction, like offline caching and push notifications. |
 | **SPA**                   | Single-Page Application. A web application that runs entirely on a single HTML page.                              |
 | **SRS**                   | Spaced Repetition System. An evidence-based learning technique that schedules reviews at increasing intervals.    |
 | **TextEntry**             | A data structure representing a user-saved text, including its title, content, and cached sentence analyses.      |
