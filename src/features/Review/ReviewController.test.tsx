@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import { screen, fireEvent, render, waitFor } from '@testing-library/react';
 import { AppDataProvider, AppDataState, SettingsProvider, SettingsState, UIProvider, View, ReviewItem } from '../../contexts';
 import { ModalProvider } from '../../components/Modal.tsx';
@@ -11,7 +11,7 @@ vi.mock('./components/ReviewComplete.tsx', () => ({ ReviewComplete: ({onManage, 
 vi.mock('./components/ReviewEmpty.tsx', () => ({ ReviewEmpty: ({onManage, onExit}: any) => <div><span>ReviewEmpty</span> <button onClick={onManage}>Manage</button><button onClick={onExit}>Exit</button></div> }));
 vi.mock('./components/DeckManager.tsx', () => ({ DeckManager: ({onExit}: any) => <div><span>DeckManager</span> <button onClick={onExit}>Back</button></div> }));
 vi.mock('./components/LearningStudyCard.tsx', () => ({ LearningStudyCard: ({onStartQuiz}: any) => <div><span>LearningStudyCard</span> <button onClick={onStartQuiz}>Start Quiz</button></div> }));
-vi.mock('./components/LearningQuizCard.tsx', () => ({ LearningQuizCard: ({item, onAnswer}: any) => <div><span>LearningQuizCard for {item.id}</span> <button onClick={() => onAnswer(item, true)}>Remember</button></div> }));
+vi.mock('./components/LearningQuizCard.tsx', () => ({ LearningQuizCard: ({quizQuestion, onAnswer}: any) => <div><span>LearningQuizCard for {quizQuestion.item.id}</span> <button onClick={() => onAnswer(quizQuestion, true)}>Remember</button></div> }));
 vi.mock('./components/ChunkCompleteScreen.tsx', () => ({ ChunkCompleteScreen: ({onContinue}: any) => <div><span>ChunkCompleteScreen</span> <button onClick={onContinue}>Continue</button></div> }));
 vi.mock('./components/ReviewStart.tsx', () => ({
     ReviewStart: ({ onStartLearning, onStartReviewing, newCount, reviewCount }: any) => (
@@ -111,14 +111,28 @@ describe('ReviewController', () => {
             });
         });
 
+        const completeLearningQuiz = async () => {
+            // mockNewItem has a kanji ('新'), so it generates two quiz questions.
+            // We need to answer both.
+            await screen.findByText(/LearningQuizCard for new-1/i);
+            const rememberButton = () => screen.getByRole('button', { name: /remember/i });
+           
+            // Answer first question
+            fireEvent.click(rememberButton());
+           
+            // Answer second question (component re-renders for the next item in queue)
+            // The same button will be present for the next question due to our mock.
+            await waitFor(() => expect(rememberButton()).toBeInTheDocument());
+            fireEvent.click(rememberButton());
+       };
+
         it('handles a correct quiz answer and shows ChunkCompleteScreen', async () => {
             const { dispatch } = renderReviewController({ reviewDeck: [mockNewItem] });
             fireEvent.click(screen.getByRole('button', { name: /learn 1 new items/i }));
             await screen.findByText('LearningStudyCard');
             fireEvent.click(screen.getByRole('button', { name: /start quiz/i }));
-            await screen.findByText(/LearningQuizCard for new-1/i);
 
-            fireEvent.click(screen.getByRole('button', { name: /remember/i }));
+            await completeLearningQuiz();
 
             await waitFor(() => {
                 expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
@@ -134,8 +148,9 @@ describe('ReviewController', () => {
             fireEvent.click(screen.getByRole('button', { name: /learn 1 new items/i })); // Start -> Learning
             await screen.findByText('LearningStudyCard');
             fireEvent.click(screen.getByRole('button', { name: /start quiz/i })); // Study -> Quiz
-            await screen.findByText(/LearningQuizCard for new-1/i);
-            fireEvent.click(screen.getByRole('button', { name: /remember/i })); // Quiz -> ChunkComplete
+            
+            await completeLearningQuiz();
+            
             await screen.findByText('ChunkCompleteScreen');
             fireEvent.click(screen.getByRole('button', { name: /continue/i })); // ChunkComplete -> Review
             
