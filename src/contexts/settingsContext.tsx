@@ -60,11 +60,14 @@ const settingsReducer = (state: SettingsState, action: Action): SettingsState =>
             const newSettings = { ...state, ...action.payload };
             
             const settingsToSave: Partial<Settings> = { ...action.payload };
-            // Normalize API key before saving
-            if (typeof settingsToSave.userApiKey === 'string' && settingsToSave.userApiKey.trim().length > 0) {
-                settingsToSave.userApiKey = settingsToSave.userApiKey.trim();
-            } else {
-                settingsToSave.userApiKey = null;
+
+            // Normalize API key ONLY if it's part of the update payload
+            if (Object.prototype.hasOwnProperty.call(settingsToSave, 'userApiKey')) {
+                if (typeof settingsToSave.userApiKey === 'string' && settingsToSave.userApiKey.trim().length > 0) {
+                    settingsToSave.userApiKey = settingsToSave.userApiKey.trim();
+                } else {
+                    settingsToSave.userApiKey = null;
+                }
             }
 
             db.saveSettings(settingsToSave);

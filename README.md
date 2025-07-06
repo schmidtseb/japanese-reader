@@ -15,6 +15,12 @@ This project is a feature-rich, client-side single-page application built with R
 -   **Local Persistence**: All your saved texts, analysis history, and review progress are saved securely in your browser's IndexedDB.
 -   **Data Management**: Import and export your entire application data (history, settings, review deck) as a JSON file.
 
+## 🤖 AI-Assisted Development
+This application was developed with the assistance of a large language model from Google. The AI contributed to the overall architecture, component creation, feature implementation, and bug fixing, working collaboratively to build a functional and robust tool.
+
+## 📄 License
+This project is open source and available under the [MIT License](LICENSE).
+
 ## 🚀 Getting Started
 
 ### Prerequisites

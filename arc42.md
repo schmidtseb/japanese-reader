@@ -1,5 +1,3 @@
-
-
 # Architecture Documentation: Japanese Sentence Analyzer
 
 **arc42 Template Version:** 9.0 (adapted for this project)
@@ -37,7 +35,7 @@ The application is a client-side tool designed for Japanese language learners. I
 | Role                  | Goals & Interests                                                                                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Language Learner**  | (Primary User) Needs an accurate, fast, and easy-to-use tool to understand Japanese and practice vocabulary. |
-| **Developer**         | Needs a clean, well-structured, and maintainable codebase to fix bugs and add new features.               |
+| **AI-Assisted Developer** | (Primary Developer) A human developer collaborating with a large language model to produce a clean, well-structured, and maintainable codebase. |
 | **App "Host"/Provider**| If deployed for public use, needs to manage API costs, potentially by requiring users to provide their own key. |
 
 ### 1.4. Potential Future Features
@@ -58,6 +56,10 @@ The current architecture provides a solid foundation for future enhancements. Th
     -   When a user clicks a Kanji, trigger a new Gemini API call specifically for that character.
     -   Display stroke order diagrams, On'yomi/Kun'yomi readings, and example compounds in the `BottomSheet` (mobile) or `Tooltip` (desktop).
 -   **Architectural Impact:** Requires a new API call function in `gemini.ts` and updates to the `InteractiveKanji` component and the UI display components.
+
+### 1.5. Development Process Note
+
+A significant aspect of this project's development is the use of **AI-Assisted Development**. The entire application, from initial architecture to feature implementation and debugging, was created through a collaborative process between a human engineer and a large language model from Google. This approach influences the "Developer" stakeholder role and demonstrates a modern workflow for rapid application development.
 
 ---
 
