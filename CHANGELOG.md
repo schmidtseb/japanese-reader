@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.5.0] - 2025-07-07
+## [3.6.0] - 2025-07-06
+
+### Added
+-   **Progressive Web App (PWA) Functionality**: The application is now a PWA.
+    -   A **Service Worker** caches the application shell and assets, allowing for instant loads on subsequent visits and full offline access to the app's interface and already-saved data.
+    -   A **Web App Manifest** allows users to "install" the application to their home screen on desktop and mobile devices for a more native-like experience.
+
+## [3.5.1] - 2025-07-06
+
+### Fixed
+-   Resolved a persistent and complex bug where Japanese (hiragana) input would fail on subsequent review cards. The issue, caused by improper state cleanup of the `wanakana` input library between React component re-renders, was fixed by enforcing a full component re-mount for each new card using a unique `key` prop. This guarantees a clean state for every question.
+
+## [3.5.0] - 2025-07-06
 
 ### Added
 -   **URL Content Extraction**: Users can now paste a URL into the editor view to automatically fetch and extract the main Japanese article text and title from a webpage, powered by Gemini. This simplifies adding content from online sources.

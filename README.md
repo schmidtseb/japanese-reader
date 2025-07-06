@@ -26,7 +26,7 @@ This project is open source and available under the [MIT License](LICENSE).
 ### Prerequisites
 
 -   [Node.js](https://nodejs.org/) (version 18 or later recommended)
--   [npm](https://www.npmjs.com/) (usually comes with Node.js)
+-   [Yarn](https://yarnpkg.com/)
 
 ### Installation
 
@@ -38,7 +38,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 2.  Install the dependencies:
     ```bash
-    npm install
+    yarn
     ```
 
 ### API Key Setup
@@ -65,10 +65,8 @@ This application requires a Google Gemini API key to function. You have two opti
 Once dependencies are installed and the API key is set up, run the development server:
 
 ```bash
-npm run dev
+yarn dev
 ```
-
-Open your browser and navigate to the local URL provided (usually `http://localhost:5173`).
 
 ## 🛠️ Tech Stack
 

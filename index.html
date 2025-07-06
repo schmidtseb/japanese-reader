@@ -115,6 +115,10 @@
       /* stone-100 */
       --color-pos-suffix-text-rgb: 87 83 78;
       /* stone-600 */
+
+      /* Review Card Type Colors */
+      --color-review-jp-en-rgb: 20 184 166; /* teal-500 */
+      --color-review-kanji-read-rgb: 107 33 168; /* purple-700 */
     }
   
     .dark {
@@ -217,6 +221,10 @@
       /* stone-800 */
       --color-pos-suffix-text-rgb: 214 211 209;
       /* stone-300 */
+      
+      /* Review Card Type Colors */
+      --color-review-jp-en-rgb: 45 212 191; /* teal-400 */
+      --color-review-kanji-read-rgb: 192 132 252; /* purple-400 */
     }
   </style>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -288,6 +296,10 @@
             'pos-conjunction-text': toTWColor('--color-pos-conjunction-text-rgb'),
             'pos-suffix-bg': toTWColor('--color-pos-suffix-bg-rgb'),
             'pos-suffix-text': toTWColor('--color-pos-suffix-text-rgb'),
+
+            // Review Card Type Colors
+            'review-jp-en': toTWColor('--color-review-jp-en-rgb'),
+            'review-kanji-read': toTWColor('--color-review-kanji-read-rgb'),
           },
           fontFamily: {
             'reading': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
@@ -328,7 +340,8 @@
     "@testing-library/jest-dom/": "https://esm.sh/@testing-library/jest-dom@^6.6.3/",
     "path": "https://esm.sh/path@^0.12.7",
     "@testing-library/dom": "https://esm.sh/@testing-library/dom@^10.4.0",
-    "@testing-library/jest-dom": "https://esm.sh/@testing-library/jest-dom@^6.6.3"
+    "@testing-library/jest-dom": "https://esm.sh/@testing-library/jest-dom@^6.6.3",
+    "wanakana": "https://esm.sh/wanakana@5.3.1"
   }
 }
 </script>

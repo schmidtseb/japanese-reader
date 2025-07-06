@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppData, ReviewItem, ReviewQuality, View, useSettings } from '../../contexts/index.ts';
 import { calculateNextReview } from '../../services/srs.ts';
@@ -13,10 +14,13 @@ import { ReviewStart } from './components/ReviewStart.tsx';
 
 const CHUNK_SIZE = 5;
 
+export type WordQuizType = 'jp-en' | 'kanji-read';
+
 export const ReviewController = () => {
     const { state, dispatch } = useAppData();
     const { state: settingsState } = useSettings();
     const { showConfirmation } = useModal();
+    const [cardKey, setCardKey] = useState(0);
 
     const [mode, setMode] = useState<'LOADING' | 'START' | 'LEARNING' | 'REVIEW' | 'COMPLETE' | 'EMPTY' | 'MANAGE'>('LOADING');
     const [learningPhase, setLearningPhase] = useState<'STUDY' | 'QUIZ' | 'CHUNK_COMPLETE'>('STUDY');
@@ -25,12 +29,12 @@ export const ReviewController = () => {
     const [learningChunks, setLearningChunks] = useState<ReviewItem[][]>([]);
     
     // State for the active review session
-    const [reviewSubQueue, setReviewSubQueue] = useState<ReviewItem[]>([]);
+    const [reviewSubQueue, setReviewSubQueue] = useState<Array<{ item: ReviewItem, quizType?: WordQuizType }>>([]);
     const [penalizedInSession, setPenalizedInSession] = useState<Set<string>>(new Set());
 
     const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
     const [studyIndex, setStudyIndex] = useState(0);
-    const [quizQueue, setQuizQueue] = useState<ReviewItem[]>([]);
+    const [quizQueue, setQuizQueue] = useState<Array<{ item: ReviewItem, quizType?: WordQuizType }>>([]);
     
     const [sessionStats, setSessionStats] = useState({ learned: 0, reviewed: 0 });
 
@@ -87,13 +91,12 @@ export const ReviewController = () => {
     }, [state.reviewDeck, state.currentTextEntryId, settingsState.newWordsPerDay]);
     
     useEffect(() => {
-        // This effect runs once on mount or when re-evaluating the entire session state.
         if (mode === 'LOADING' || (mode !== 'LEARNING' && mode !== 'REVIEW' && mode !== 'MANAGE')) {
-            // Reset all session progress
             setCurrentChunkIndex(0);
             setStudyIndex(0);
             setQuizQueue([]);
             setReviewSubQueue([]);
+            setCardKey(0); // Reset key on mode change
             setSessionStats({ learned: 0, reviewed: 0 });
             setLearningPhase('STUDY');
 
@@ -102,7 +105,6 @@ export const ReviewController = () => {
     }, [mode, reevaluateMode]);
     
     useEffect(() => {
-        // This effect handles the end of a review sub-session.
         if (mode === 'REVIEW' && reviewSubQueue.length === 0 && sessionStats.reviewed > 0) {
              reevaluateMode();
         }
@@ -127,7 +129,18 @@ export const ReviewController = () => {
     const handleStartReviewing = () => {
         if (sessionQueues.allDueReviewItems.length > 0) {
             setPenalizedInSession(new Set());
-            setReviewSubQueue([...sessionQueues.allDueReviewItems]);
+            const reviewItemsWithQuizType = sessionQueues.allDueReviewItems.map(item => {
+                let quizType: WordQuizType | undefined = undefined;
+                if (item.type === 'word') {
+                    const types: WordQuizType[] = ['jp-en'];
+                    if (/[一-龯]/.test(item.content.japanese_segment)) {
+                        types.push('kanji-read');
+                    }
+                    quizType = types[Math.floor(Math.random() * types.length)];
+                }
+                return { item, quizType };
+            });
+            setReviewSubQueue(reviewItemsWithQuizType);
             setMode('REVIEW');
         } else {
             reevaluateMode();
@@ -137,81 +150,97 @@ export const ReviewController = () => {
     const startQuizForChunk = () => {
         const currentChunk = learningChunks[currentChunkIndex];
         if (currentChunk) {
-            setQuizQueue([...currentChunk].sort(() => 0.5 - Math.random()));
+            const newQuizQueue: Array<{ item: ReviewItem, quizType?: WordQuizType }> = [];
+            currentChunk.forEach(item => {
+                if (item.type === 'word') {
+                    newQuizQueue.push({ item, quizType: 'jp-en' });
+                    if (/[一-龯]/.test(item.content.japanese_segment)) {
+                        newQuizQueue.push({ item, quizType: 'kanji-read' });
+                    }
+                } else if (item.type === 'grammar') {
+                    newQuizQueue.push({ item });
+                }
+            });
+            setQuizQueue(newQuizQueue.sort(() => 0.5 - Math.random()));
             setLearningPhase('QUIZ');
         }
     };
 
-    const handleQuizAnswer = (item: ReviewItem, remembered: boolean) => {
-        let newQueue = [...quizQueue];
-        if (remembered) {
-            const updatedItem = calculateNextReview(item, 3); // "Good"
-            dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
-            setSessionStats(prev => ({ ...prev, learned: prev.learned + 1 }));
-            newQueue = newQueue.filter(i => i.id !== item.id);
-        } else {
-            newQueue = newQueue.filter(i => i.id !== item.id);
-            newQueue.push(item); 
+    const handleQuizAnswer = (quizQuestion: { item: ReviewItem, quizType?: WordQuizType }, remembered: boolean) => {
+        const newQueue = [...quizQueue];
+        const itemJustAnswered = newQueue.shift(); // Take the current item off the front
+
+        if (!remembered) {
+            newQueue.push(itemJustAnswered!); // Put it on the back if forgotten
         }
         
         if (newQueue.length === 0) {
+            const currentChunk = learningChunks[currentChunkIndex];
+            currentChunk.forEach(item => {
+                const updatedItem = calculateNextReview(item, 3); // "Good"
+                dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
+            });
+            setSessionStats(prev => ({ ...prev, learned: prev.learned + currentChunk.length }));
             setLearningPhase('CHUNK_COMPLETE');
         } else {
             setQuizQueue(newQueue);
         }
+        
+        // This must be called for every answer to ensure the card component resets its internal state.
+        setCardKey(k => k + 1);
     };
 
     const advanceAfterChunk = () => {
-        // If there are more chunks of new items to learn
         if (currentChunkIndex < learningChunks.length - 1) {
             setCurrentChunkIndex(prev => prev + 1);
             setStudyIndex(0);
             setLearningPhase('STUDY');
         } else {
-            // All learning chunks for this session are done.
-            // Now, check if there are any due reviews waiting.
-            // We use the initially calculated queue. This is safe because an item cannot be
-            // both new (srsStage=0) and due (srsStage>0) at the same time.
             if (sessionQueues.allDueReviewItems.length > 0) {
-                handleStartReviewing(); // This will switch mode to 'REVIEW'
+                handleStartReviewing();
             } else {
-                // No more learning, no reviews. The session is over.
-                // Re-evaluate will take us to the 'COMPLETE' screen.
                 reevaluateMode();
             }
         }
     };
     
-    const handleReviewAction = (quality: ReviewQuality) => {
-        const currentItem = reviewSubQueue[0];
-        if (!currentItem) return;
+    const handleReviewAnswer = (isCorrectOrQuality: boolean | ReviewQuality) => {
+        const currentQueueItem = reviewSubQueue[0];
+        if (!currentQueueItem) return;
 
-        if (quality === 1) { // "Again"
-            // Only calculate SRS penalty on the first "Again" in a session.
-            if (!penalizedInSession.has(currentItem.id)) {
-                const updatedItem = calculateNextReview(currentItem, quality);
+        const { item } = currentQueueItem;
+        let quality: ReviewQuality;
+
+        if (typeof isCorrectOrQuality === 'boolean') {
+            quality = isCorrectOrQuality ? 3 : 1; // Correct -> Good, Incorrect -> Again
+        } else {
+            quality = isCorrectOrQuality; // For grammar cards
+        }
+
+        if (quality === 1) {
+            if (!penalizedInSession.has(item.id)) {
+                const updatedItem = calculateNextReview(item, quality);
                 dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
-                setPenalizedInSession(prev => new Set(prev).add(currentItem.id));
+                setPenalizedInSession(prev => new Set(prev).add(item.id));
             }
-            // Always move the item to the back of the queue to be reviewed again.
             setReviewSubQueue(prevQueue => {
                 const rest = prevQueue.slice(1);
-                return [...rest, currentItem];
+                return [...rest, currentQueueItem];
             });
-        } else { // Correct answer (Hard, Good, Easy)
-            // If the item was penalized in this session, don't upgrade its SRS stage.
-            // Just remove it from the queue for this session, as the user has now "re-learned" it.
-            if (penalizedInSession.has(currentItem.id)) {
+        } else {
+            if (penalizedInSession.has(item.id)) {
                 setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
                 setReviewSubQueue(prevQueue => prevQueue.slice(1));
             } else {
-                // This is a normal correct answer for an item not previously failed in this session.
-                const updatedItem = calculateNextReview(currentItem, quality);
+                const updatedItem = calculateNextReview(item, quality);
                 dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
                 setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
                 setReviewSubQueue(prevQueue => prevQueue.slice(1));
             }
         }
+        
+        // This must be called for every answer to ensure the card component resets its internal state.
+        setCardKey(k => k + 1);
     };
     
     const handleDeleteItem = (itemId: string) => {
@@ -257,10 +286,11 @@ export const ReviewController = () => {
                     const currentQuizItem = quizQueue[0];
                     if (!currentQuizItem) return null;
                     return <LearningQuizCard
-                        item={currentQuizItem}
+                        quizQuestion={currentQuizItem}
                         onExit={handleExit}
                         onAnswer={handleQuizAnswer}
                         remainingCount={quizQueue.length}
+                        cardKey={cardKey}
                     />;
                 }
                 case 'CHUNK_COMPLETE':
@@ -274,11 +304,17 @@ export const ReviewController = () => {
         }
 
         case 'REVIEW': {
-            const currentItem = reviewSubQueue[0];
-            if (!currentItem) {
+            const currentQueueItem = reviewSubQueue[0];
+            if (!currentQueueItem) {
                 return <div className="p-6 text-center text-text-muted">Loading next review...</div>;
             }
-            return <ReviewCard item={currentItem} onReview={handleReviewAction} onExit={handleExit} />;
+            return <ReviewCard 
+                item={currentQueueItem.item}
+                quizType={currentQueueItem.quizType}
+                onReview={handleReviewAnswer}
+                onExit={handleExit}
+                cardKey={cardKey}
+            />;
         }
             
         case 'COMPLETE': {
