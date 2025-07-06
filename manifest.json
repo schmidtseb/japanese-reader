@@ -1,0 +1,17 @@
+{
+  "name": "Japanese Sentence Analyzer",
+  "short_name": "JS Analyzer",
+  "description": "An AI-powered tool for analyzing Japanese sentences and learning with an integrated Spaced Repetition System (SRS).",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fcfcfb",
+  "theme_color": "#3b82f6",
+  "scope": "."
+}
