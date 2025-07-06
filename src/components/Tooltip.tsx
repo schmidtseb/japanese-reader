@@ -58,7 +58,7 @@ export function Tooltip() {
     return createPortal(
         <div
             ref={tooltipRef}
-            className="fixed z-50 max-w-sm rounded-xl glass-morphism border border-border/50 shadow-2xl p-4 text-base transition-all duration-200 max-h-96 overflow-y-auto no-scrollbar"
+            className="fixed z-50 max-w-sm rounded-xl glass-morphism border border-border/50 shadow-2xl p-4 text-base transition-all duration-200 max-h-96 overflow-y-auto no-scrollbar tooltip-content"
             style={{
                 left: `${position.left}px`,
                 top: `${position.top}px`,

@@ -117,7 +117,7 @@ export const BottomSheet = () => {
                         <i className="bi bi-x-lg text-2xl"></i>
                     </button>
                 </header>
-                <div className="p-4 overflow-y-auto no-scrollbar flex-grow">
+                <div className="p-4 overflow-y-auto no-scrollbar flex-grow bottom-sheet-content">
                     {content.body}
                 </div>
             </div>

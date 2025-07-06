@@ -36,24 +36,31 @@
 
     /* Font size scaling */
     :root {
-    --font-size-multiplier: 1.0;
+      --font-size-multiplier: 1.0;
     }
     /* Reader view sentences have text-lg and sm:text-xl classes */
     .reader-view-text p {
-    font-size: calc(1.125rem * var(--font-size-multiplier));
-    line-height: calc(1.75rem * var(--font-size-multiplier));
+      font-size: calc(1.125rem * var(--font-size-multiplier));
+      line-height: calc(1.75rem * var(--font-size-multiplier));
     }
     @media (min-width: 640px) {
-    .reader-view-text p {
+      .reader-view-text p {
         font-size: calc(1.25rem * var(--font-size-multiplier));
-    }
+      }
     }
     /* Analysis view & Reading Mode */
     .analysis-view .text-2xl, .reading-mode-view .text-2xl { font-size: calc(1.5rem * var(--font-size-multiplier)); line-height: calc(2.2rem * var(--font-size-multiplier)); }
+    .analysis-view .text-xl, .reading-mode-view .text-xl { font-size: calc(1.25rem * var(--font-size-multiplier)); }
+    .analysis-view .text-lg, .reading-mode-view .text-lg { font-size: calc(1.125rem * var(--font-size-multiplier)); }
     .analysis-view .text-base, .reading-mode-view .text-base { font-size: calc(1rem * var(--font-size-multiplier)); }
     .analysis-view .text-sm, .reading-mode-view .text-sm { font-size: calc(0.875rem * var(--font-size-multiplier)); }
-    .analysis-view .text-lg, .reading-mode-view .text-lg { font-size: calc(1.125rem * var(--font-size-multiplier)); }
-    .analysis-view .text-xl, .reading-mode-view .text-xl { font-size: calc(1.25rem * var(--font-size-multiplier)); }
+    .analysis-view .text-xs, .reading-mode-view .text-xs { font-size: calc(0.75rem * var(--font-size-multiplier)); line-height: calc(1rem * var(--font-size-multiplier)); }
+
+    /* Popup font scaling */
+    .tooltip-content { font-size: calc(1rem * var(--font-size-multiplier)); }
+    .tooltip-content .text-lg, .bottom-sheet-content .text-lg { font-size: calc(1.125rem * var(--font-size-multiplier)); }
+    .tooltip-content .text-sm, .bottom-sheet-content .text-sm { font-size: calc(0.875rem * var(--font-size-multiplier)); }
+    .tooltip-content .text-xs, .bottom-sheet-content .text-xs { font-size: calc(0.75rem * var(--font-size-multiplier)); line-height: calc(1rem * var(--font-size-multiplier)); }
 }
 
 html {

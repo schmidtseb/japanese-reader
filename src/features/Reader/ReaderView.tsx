@@ -8,6 +8,13 @@ import { AnalysisPlaceholder } from './components/AnalysisPlaceholder.tsx';
 const ReaderView = () => {
     const { state, dispatch } = useAppData();
     const currentEntry = state.history.find(e => e.id === state.currentTextEntryId);
+
+    useEffect(() => {
+        if (!currentEntry) {
+            dispatch({type: 'RESET_VIEW'});
+        }
+    }, [currentEntry, dispatch]);
+
     const { analysis, isLoading, error, reanalyze } = useSentenceAnalysis(currentEntry?.id, state.selectedSentence);
     
     const handleSentenceClick = useCallback((sentence: string) => {
@@ -15,7 +22,6 @@ const ReaderView = () => {
     }, [dispatch]);
     
     if (!currentEntry) {
-        useEffect(() => { dispatch({type: 'RESET_VIEW'}) }, [dispatch]);
         return null;
     }
 
@@ -94,7 +100,7 @@ const ReaderView = () => {
              {/* Right Pane: Analysis. This entire pane will scroll on desktop. */}
             <div className="md:h-full md:overflow-y-auto no-scrollbar md:border-l border-border md:min-w-0">
                 <div className="p-6 md:h-full">
-                    <div id="analysis-view" className="md:h-full">
+                    <div id="analysis-view" className="analysis-view md:h-full">
                         {(() => {
                             if (!state.selectedSentence) {
                                 return <div className="text-center p-8 text-text-muted md:h-full flex items-center justify-center">Select a sentence to begin.</div>;
