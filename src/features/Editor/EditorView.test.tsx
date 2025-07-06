@@ -33,6 +33,7 @@ const renderEditorView = (initialAppData: Partial<AppDataState> = {}, initialSet
     selectedSentence: null,
     history: [],
     reviewDeck: [],
+    urlToImport: null,
     ...initialAppData,
   };
   

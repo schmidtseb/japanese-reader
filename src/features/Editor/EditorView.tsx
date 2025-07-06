@@ -1,6 +1,7 @@
 
 
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useAppData, View, TextEntry, useSettings } from '../../contexts/index.ts';
 import { useModal } from '../../components/Modal.tsx';
 import * as db from '../../services/db.ts';
@@ -59,33 +60,47 @@ export default function EditorView() {
         }
     }, [text, editingEntry, isLoaded]);
 
-    const handleFetchUrl = async () => {
+    const triggerUrlFetch = useCallback(async (urlToFetch: string) => {
         setFetchUrlError(null);
+        setIsFetchingUrl(true);
+        try {
+            const result = await extractTextFromUrl(urlToFetch);
+            setTitle(result.title);
+            setText(result.japanese_text);
+            setUrl('');
+            setActiveTab('manual');
+        } catch (err) {
+            // Put the failed URL back in the input for the user to see/correct
+            setUrl(urlToFetch);
+            setActiveTab('url');
+            setFetchUrlError((err as Error).message);
+        } finally {
+            setIsFetchingUrl(false);
+        }
+    }, []);
+
+    const handleFetchUrl = useCallback(async () => {
         if (!url) {
             setFetchUrlError("Please enter a URL.");
             return;
         }
         try {
-            // Basic client-side validation
             new URL(url);
         } catch (_) {
             setFetchUrlError("Invalid URL format.");
             return;
         }
-
-        setIsFetchingUrl(true);
-        try {
-            const result = await extractTextFromUrl(url);
-            setTitle(result.title);
-            setText(result.japanese_text);
-            setUrl('');
-            setActiveTab('manual'); // Switch to manual tab to show populated fields
-        } catch (err) {
-            setFetchUrlError((err as Error).message);
-        } finally {
-            setIsFetchingUrl(false);
+        await triggerUrlFetch(url);
+    }, [url, triggerUrlFetch]);
+    
+    // Handle incoming shared URL from PWA share_target
+    useEffect(() => {
+        if (state.urlToImport) {
+            // Clear the URL from global state first to prevent re-triggering
+            dispatch({ type: 'CLEAR_URL_TO_IMPORT' });
+            triggerUrlFetch(state.urlToImport);
         }
-    };
+    }, [state.urlToImport, dispatch, triggerUrlFetch]);
 
     const handleAnalyze = () => {
         if (!isApiKeySet) {

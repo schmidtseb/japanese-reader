@@ -50,6 +50,7 @@ const renderReviewController = (initialAppData: Partial<AppDataState> = {}, init
     selectedSentence: null,
     history: [],
     reviewDeck: [],
+    urlToImport: null,
     ...initialAppData,
   };
   

@@ -24,6 +24,7 @@ const initialState: AppDataState = {
   selectedSentence: null,
   history: [],
   reviewDeck: [],
+  urlToImport: null,
 };
 
 const mockTextEntry: TextEntry = {

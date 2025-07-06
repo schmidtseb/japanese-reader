@@ -87,14 +87,25 @@ function Header() {
 }
 
 export default function App() {
-  const { state: appDataState } = useAppData();
+  const { state: appDataState, dispatch } = useAppData();
   const { state: settingsState } = useSettings();
   
   useHotkeys();
 
   useEffect(() => {
+    // On app load, check if a URL was passed via the Share Target API
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedUrl = urlParams.get('url');
+
+    if (sharedUrl) {
+        dispatch({ type: 'SET_URL_TO_IMPORT', payload: sharedUrl });
+        // Clean the URL from the address bar to prevent re-triggering on refresh
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+
     loadSpeechSynthesisVoices();
-  }, []);
+  }, [dispatch]);
 
   if (appDataState.isLoading || settingsState.isLoading) {
     return (

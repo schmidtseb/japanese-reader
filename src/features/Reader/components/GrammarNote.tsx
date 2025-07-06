@@ -4,7 +4,13 @@ import { AddToDeckButton } from './AddToDeckButton.tsx';
 import { Furigana } from '../../../components/Furigana.tsx';
 import { useGetExampleSentences } from '../../../services/gemini.ts';
 
-export function GrammarNote({ pattern, onNoteClick, isFocused }: { pattern: any, onNoteClick: (pattern: any) => void, isFocused: boolean }) {
+interface GrammarNoteProps {
+    pattern: any;
+    onNoteClick: (pattern: any) => void;
+    isFocused: boolean;
+}
+
+export const GrammarNote: React.FC<GrammarNoteProps> = ({ pattern, onNoteClick, isFocused }) => {
     const { isLoading, error, data, execute: getExampleSentences } = useGetExampleSentences();
     const [showExamples, setShowExamples] = useState(false);
 

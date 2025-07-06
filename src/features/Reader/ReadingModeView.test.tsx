@@ -62,6 +62,7 @@ const renderReadingModeView = (initialAppData: Partial<AppDataState> = {}) => {
     selectedSentence: null,
     history: [mockTextEntry],
     reviewDeck: [],
+    urlToImport: null,
     ...initialAppData,
   };
   

@@ -43,6 +43,7 @@ export interface AppDataState {
     selectedSentence: string | null;
     history: TextEntry[];
     reviewDeck: ReviewItem[];
+    urlToImport: string | null;
 }
 
 // --- ACTIONS ---
@@ -63,7 +64,9 @@ export type AppDataAction =
   | { type: 'RESET_VIEW' }
   | { type: 'NAVIGATE_SENTENCE'; payload: { direction: 'next' | 'prev' } }
   | { type: 'JUMP_TO_SENTENCE'; payload: { index: number } }
-  | { type: 'CACHE_ANALYSIS'; payload: { entryId: string; sentence: string; depth: AnalysisDepth; analysis: any; } };
+  | { type: 'CACHE_ANALYSIS'; payload: { entryId: string; sentence: string; depth: AnalysisDepth; analysis: any; } }
+  | { type: 'SET_URL_TO_IMPORT'; payload: string }
+  | { type: 'CLEAR_URL_TO_IMPORT' };
 
 
 // --- INITIAL STATE ---
@@ -75,6 +78,7 @@ const initialState: AppDataState = {
     selectedSentence: null,
     history: [],
     reviewDeck: [],
+    urlToImport: null,
 };
 
 
@@ -256,6 +260,12 @@ export const appDataReducer = (state: AppDataState, action: AppDataAction): AppD
             db.addOrUpdateTextEntry(updatedEntry);
             return { ...state, history: historyCopy };
         }
+        
+        case 'SET_URL_TO_IMPORT':
+            return { ...state, view: View.Editor, urlToImport: action.payload };
+
+        case 'CLEAR_URL_TO_IMPORT':
+            return { ...state, urlToImport: null };
 
         default:
             return state;
