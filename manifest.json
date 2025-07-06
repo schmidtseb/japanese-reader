@@ -13,5 +13,14 @@
   "display": "standalone",
   "background_color": "#fcfcfb",
   "theme_color": "#3b82f6",
-  "scope": "."
+  "scope": ".",
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
