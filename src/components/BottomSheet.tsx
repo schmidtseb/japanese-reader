@@ -48,16 +48,27 @@ export const BottomSheet = () => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
 
-            // If the click is on any segment, let that segment's own click handler
-            // decide whether to close the sheet or update its content.
-            // This prevents the sheet from closing on mousedown and then reopening on click.
-            if (target.closest('.segment')) {
+            // Rule 1: Ignore clicks within the sheet content itself.
+            if (sheetRef.current && sheetRef.current.contains(target)) {
                 return;
             }
 
-            if (sheetRef.current && !sheetRef.current.contains(event.target as Node)) {
-                handleClose();
+            // Rule 2: Ignore clicks on the element that triggered the sheet.
+            // Its own handler will toggle the sheet's visibility.
+            if (targetElement && targetElement.contains(target)) {
+                return;
             }
+
+            // Rule 3: Ignore clicks on other major interactive elements in the UI.
+            // This prevents the sheet from closing when the user intends to interact
+            // with another part of the app, which avoids the "double-tap" problem.
+            if (target.closest('button, a, [role="button"], .segment')) {
+                return;
+            }
+            
+            // If none of the above rules apply, the click was on a non-interactive
+            // area (like the backdrop or page background), so close the sheet.
+            handleClose();
         };
 
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -68,15 +79,18 @@ export const BottomSheet = () => {
 
         // Add listeners when mounted and visible
         if (isMounted && visible) {
-            document.addEventListener('mousedown', handleClickOutside);
+            // Use `click` with capture. This makes it more reliable on mobile devices,
+            // preventing issues where a `mousedown` might close the sheet before the
+            // `click` to open it has fired.
+            document.addEventListener('click', handleClickOutside, { capture: true });
             document.addEventListener('keydown', handleKeyDown);
         }
 
         return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('click', handleClickOutside, { capture: true });
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isMounted, visible]);
+    }, [isMounted, visible, targetElement]);
 
     // Handle highlighting the target segment in the main text.
     useEffect(() => {
