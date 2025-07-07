@@ -1,5 +1,8 @@
 
 
+
+
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useAppData, useSettings, AnalysisDepth, depthLevels } from '../contexts/index.ts';
 import { useModal } from './Modal.tsx';
@@ -134,7 +137,7 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
     return (
         <>
             <div
-                className="fixed inset-0 bg-black/10 backdrop-blur-sm z-[80]"
+                className="fixed inset-0 bg-background/80 backdrop-blur-lg z-[80]"
                 onClick={() => setIsOpen(false)}
             ></div>
             <div ref={menuRef} className="fixed top-20 right-4 flex flex-col w-[95vw] max-w-sm glass-morphism rounded-xl shadow-2xl ring-1 ring-border-subtle z-[90] origin-top-right animate-fade-in max-h-[calc(100vh-12rem)]">

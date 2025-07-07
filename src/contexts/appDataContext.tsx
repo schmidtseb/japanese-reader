@@ -48,7 +48,7 @@ export interface AppDataState {
 
 // --- ACTIONS ---
 export type AppDataAction =
-  | { type: 'INITIALIZE_DATA_SUCCESS'; payload: { history: TextEntry[], reviewDeck: ReviewItem[] } }
+  | { type: 'INITIALIZE_DATA_SUCCESS'; payload: { history: TextEntry[], reviewDeck: ReviewItem[], currentTextEntryId: string | null, view: View } }
   | { type: 'INITIALIZE_DATA_FAILURE' }
   | { type: 'SET_VIEW'; payload: View }
   | { type: 'START_EDITING'; payload: string }
@@ -86,7 +86,14 @@ const initialState: AppDataState = {
 export const appDataReducer = (state: AppDataState, action: AppDataAction): AppDataState => {
     switch (action.type) {
         case 'INITIALIZE_DATA_SUCCESS':
-            return { ...state, isLoading: false, ...action.payload };
+            return { 
+                ...state, 
+                isLoading: false, 
+                history: action.payload.history,
+                reviewDeck: action.payload.reviewDeck,
+                currentTextEntryId: action.payload.currentTextEntryId,
+                view: action.payload.view,
+            };
         
         case 'INITIALIZE_DATA_FAILURE':
             return { ...state, isLoading: false };
@@ -106,6 +113,7 @@ export const appDataReducer = (state: AppDataState, action: AppDataAction): AppD
         case 'RESET_VIEW': {
             db.setTransientState('unsaved-title', '');
             db.setTransientState('unsaved-text', '');
+            db.setTransientState('session_currentTextEntryId', null);
             return {
                 ...state,
                 view: View.Editor,
@@ -116,6 +124,10 @@ export const appDataReducer = (state: AppDataState, action: AppDataAction): AppD
         }
 
         case 'SET_CURRENT_TEXT_ENTRY_ID':
+            db.setTransientState('session_currentTextEntryId', action.payload);
+            // When a text is loaded, clear any stale "unsaved" text from the editor.
+            db.setTransientState('unsaved-title', '');
+            db.setTransientState('unsaved-text', '');
             return { ...state, currentTextEntryId: action.payload, selectedSentence: null };
 
         case 'SET_SELECTED_SENTENCE':
@@ -132,6 +144,9 @@ export const appDataReducer = (state: AppDataState, action: AppDataAction): AppD
         case 'ADD_OR_UPDATE_TEXT_ENTRY': {
             const newEntry = action.payload;
             db.addOrUpdateTextEntry(newEntry);
+            // When a text is saved, clear the transient "unsaved" version.
+            db.setTransientState('unsaved-title', '');
+            db.setTransientState('unsaved-text', '');
             const existingIndex = state.history.findIndex(e => e.id === newEntry.id);
             let newHistory;
             if (existingIndex > -1) {
@@ -149,6 +164,10 @@ export const appDataReducer = (state: AppDataState, action: AppDataAction): AppD
             db.deleteTextEntry(entryId);
             const newHistory = state.history.filter(e => e.id !== entryId);
             const isDeletingCurrent = state.currentTextEntryId === entryId;
+            // If deleting the currently viewed text, clear it from the session.
+            if (isDeletingCurrent) {
+                db.setTransientState('session_currentTextEntryId', null);
+            }
             return { 
                 ...state, 
                 history: newHistory,
@@ -160,6 +179,7 @@ export const appDataReducer = (state: AppDataState, action: AppDataAction): AppD
         
         case 'CLEAR_HISTORY': {
             db.clearTextEntries();
+            db.setTransientState('session_currentTextEntryId', null);
             return { ...state, history: [], currentTextEntryId: null, view: View.Editor, selectedSentence: null };
         }
 
@@ -298,9 +318,37 @@ export function AppDataProvider({ children, _testDispatch, _testState }: AppData
 
         const loadData = async () => {
             try {
-                const history = await db.getAllTextEntries();
-                const reviewDeck = await db.getAllReviewItems();
-                dispatch({ type: 'INITIALIZE_DATA_SUCCESS', payload: { history, reviewDeck } });
+                // Fetch all initial data in parallel
+                const [history, reviewDeck, sessionCurrentId] = await Promise.all([
+                    db.getAllTextEntries(),
+                    db.getAllReviewItems(),
+                    db.getTransientState('session_currentTextEntryId'),
+                ]);
+
+                // Validate the stored ID against the actual history
+                const validCurrentId = sessionCurrentId && history.some(entry => entry.id === sessionCurrentId)
+                    ? sessionCurrentId
+                    : null;
+                
+                // If the stored ID was stale, clear it from the DB
+                if (sessionCurrentId && !validCurrentId) {
+                    await db.setTransientState('session_currentTextEntryId', null);
+                }
+
+                // Determine the initial view based on whether there's a valid loaded text
+                const initialView = validCurrentId ? View.Reader : View.Editor;
+
+                // Dispatch a single action to initialize the application state
+                dispatch({ 
+                    type: 'INITIALIZE_DATA_SUCCESS', 
+                    payload: { 
+                        history, 
+                        reviewDeck,
+                        currentTextEntryId: validCurrentId, // Pass the validated ID
+                        view: initialView, // Pass the determined view
+                    } 
+                });
+
             } catch (error) {
                 console.error("Failed to load app data from IndexedDB", error);
                 dispatch({ type: 'INITIALIZE_DATA_FAILURE' });

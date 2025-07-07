@@ -86,8 +86,9 @@ export const InteractiveWordCard: React.FC<InteractiveWordCardProps> = ({ item, 
                 correct = isSimilar(currentVal, content.english_equivalent);
                 break;
             case 'kanji-read':
-                const correctReadings = content.reading.split('/').map((r: string) => r.trim());
-                correct = correctReadings.includes(currentVal.trim());
+                // Readings can also have multiple answers separated by '/' or ','
+                const correctReadings = content.reading.split(/[,/]/).map((r: string) => r.trim()).filter(Boolean);
+                correct = correctReadings.some((reading: string) => isSimilar(currentVal, reading));
                 break;
         }
         setIsCorrect(correct);

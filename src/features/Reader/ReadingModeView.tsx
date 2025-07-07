@@ -39,6 +39,19 @@ const ReadingModeView = () => {
         }, 4000);
     }, []);
 
+    const keepHeaderVisible = useCallback((keepVisible: boolean) => {
+        if (headerTimerRef.current) {
+            window.clearTimeout(headerTimerRef.current);
+            headerTimerRef.current = null;
+        }
+        if (!keepVisible) {
+            // Restart timer if we're done interacting
+            headerTimerRef.current = window.setTimeout(() => {
+                setIsHeaderVisible(false);
+            }, 2500); // Give a bit of time to move mouse away etc.
+        }
+    }, []);
+
     const handleActivity = useCallback(() => {
         setIsFloatingNavVisible(true);
         if (floatingNavInactivityTimerRef.current) {
@@ -158,6 +171,7 @@ const ReadingModeView = () => {
                 onSentenceChange={handleSentenceChange}
                 totalSentences={sentences.length}
                 isVisible={isHeaderVisible}
+                onKeepVisible={keepHeaderVisible}
             />
             <FloatingNavButtons
                 isVisible={isFloatingNavVisible}

@@ -33,24 +33,41 @@ function levenshtein(a: string, b: string): number {
 
 
 /**
- * Compares two strings for similarity, allowing for minor typos.
+ * Compares two strings for similarity, allowing for minor typos and variations in the correct answer.
+ * Handles multiple answers separated by '/' or ',', and information in parentheses.
  * @param userInput The string provided by the user.
- * @param correctAnswer The correct string to compare against.
+ * @param correctAnswer The correct string to compare against, which may contain variations.
  * @returns A boolean indicating if the strings are similar enough to be considered correct.
  */
 export function isSimilar(userInput: string, correctAnswer: string): boolean {
     const s1 = userInput.trim().toLowerCase();
-    const s2 = correctAnswer.trim().toLowerCase();
     
-    // Exact match is always true
+    if (!correctAnswer) {
+        return s1 === '';
+    }
+    
+    const s2 = correctAnswer.trim().toLowerCase();
+
+    // Exact match first for performance
     if (s1 === s2) return true;
 
-    // Handle multiple correct answers separated by a slash
-    const correctAnswers = s2.split('/').map(ans => ans.trim());
-    if (correctAnswers.some(ans => s1 === ans)) return true;
+    // Create a set of possible answers.
+    // 1. Answers with parentheses content removed. e.g., "to go (out)" -> "to go"
+    const baseAnswers = s2.replace(/\s*\([^)]*\)/g, '').trim().split(/[,/]/).map(s => s.trim()).filter(Boolean);
+    
+    // 2. Answers with parentheses characters removed, keeping the content. e.g., "to go (out)" -> "to go out"
+    const expandedAnswers = s2.replace(/[()]/g, '').trim().split(/[,/]/).map(s => s.trim()).filter(Boolean);
+    
+    // Combine and get unique answers
+    const allPossibleAnswers = [...new Set([...baseAnswers, ...expandedAnswers])];
 
-    // Check similarity for each possible correct answer
-    return correctAnswers.some(ans => {
+    // Check for exact match against any of the possible answers.
+    if (allPossibleAnswers.some(ans => s1 === ans)) {
+        return true;
+    }
+
+    // Check for similarity using Levenshtein distance for each possible answer.
+    return allPossibleAnswers.some(ans => {
         const distance = levenshtein(s1, ans);
         const maxLength = Math.max(s1.length, ans.length);
 
@@ -58,7 +75,7 @@ export function isSimilar(userInput: string, correctAnswer: string): boolean {
         if (maxLength <= 4) return distance <= 1; // e.g. "car" vs "cat"
         if (maxLength <= 10) return distance <= 2; // e.g. "beautiful" vs "beautifull"
         
-        // Allow up to 20% of the string length in typos for longer answers.
+        // Allow up to ~20% of the string length in typos for longer answers.
         return distance <= Math.floor(maxLength * 0.2);
     });
 }

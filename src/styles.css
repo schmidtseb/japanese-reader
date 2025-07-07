@@ -1,0 +1,222 @@
+/* 
+    Improved Reader Color Theme using CSS Variables.
+    - Optimized for reading comfort with reduced eye strain
+    - Light theme: warm, soft tones for extended reading sessions
+    - Dark theme: high contrast with deep backgrounds and bright text
+    - Part-of-speech colors: vibrant yet muted to avoid distraction
+*/
+:root {
+    /* Base Palette - Warmer, softer tones for better reading comfort */
+    --color-background-rgb: 252 252 250;
+    /* warm off-white */
+    --color-surface-rgb: 255 255 255;
+    /* pure white */
+    --color-surface-soft-rgb: 249 248 246;
+    /* warm gray-50 */
+    --color-surface-subtle-rgb: 245 244 241;
+    /* warm gray-100 */
+    --color-surface-hover-rgb: 241 240 236;
+    /* warm gray-150 */
+    --color-border-rgb: 232 229 224;
+    /* warm gray-200 */
+    --color-border-strong-rgb: 168 162 152;
+    /* warm gray-400 */
+    --color-border-subtle-rgb: 237 234 229;
+    /* subtle warm border */
+
+    /* Text Palette - Higher contrast for better readability */
+    --color-text-primary-rgb: 28 25 23;
+    /* warm black */
+    --color-text-secondary-rgb: 68 64 60;
+    /* warm gray-700 */
+    --color-text-muted-rgb: 120 113 108;
+    /* warm gray-500 */
+    --color-text-inverted-rgb: 250 250 249;
+    /* warm white */
+
+    /* Primary (Softer Blue) - Less aggressive than indigo */
+    --color-primary-rgb: 59 130 246;
+    /* blue-500 */
+    --color-primary-focus-rgb: 37 99 235;
+    /* blue-600 */
+    --color-primary-text-rgb: 255 255 255;
+    /* white */
+    --color-primary-subtle-bg-rgb: 239 246 255;
+    /* blue-50 */
+    --color-primary-subtle-text-rgb: 30 64 175;
+    /* blue-800 */
+    --color-focus-ring-rgb: 96 165 250;
+    /* blue-400 */
+
+    /* Accent (Teal) - Calming accent color */
+    --color-accent-rgb: 20 184 166;
+    /* teal-500 */
+    --color-accent-text-rgb: 15 118 110;
+    /* teal-700 */
+    --color-accent-subtle-bg-rgb: 240 253 250;
+    /* teal-50 */
+    --color-accent-selected-bg-rgb: 204 251 241;
+    /* teal-100 */
+
+    /* Destructive (Softer Red) */
+    --color-destructive-rgb: 239 68 68;
+    /* red-500 */
+    --color-destructive-hover-rgb: 220 38 38;
+    /* red-600 */
+    --color-destructive-subtle-bg-rgb: 254 242 242;
+    /* red-50 */
+    --color-destructive-subtle-text-rgb: 153 27 27;
+    /* red-800 */
+
+    /* Warning (Softer Amber) */
+    --color-warning-text-rgb: 217 119 6;
+    /* amber-600 */
+
+    /* Part of Speech Colors - Vibrant but muted for reading comfort */
+    --color-pos-noun-bg-rgb: 240 249 255;
+    /* sky-50 */
+    --color-pos-noun-text-rgb: 12 74 110;
+    /* sky-900 */
+    --color-pos-verb-bg-rgb: 236 254 255;
+    /* cyan-50 */
+    --color-pos-verb-text-rgb: 22 78 99;
+    /* cyan-900 */
+    --color-pos-particle-bg-rgb: 248 250 252;
+    /* slate-50 */
+    --color-pos-particle-text-rgb: 71 85 105;
+    /* slate-600 */
+    --color-pos-adjective-bg-rgb: 250 245 255;
+    /* violet-50 */
+    --color-pos-adjective-text-rgb: 91 33 182;
+    /* violet-800 */
+    --color-pos-adverb-bg-rgb: 240 253 250;
+    /* teal-50 */
+    --color-pos-adverb-text-rgb: 17 94 89;
+    /* teal-800 */
+    --color-pos-auxiliary-bg-rgb: 255 251 235;
+    /* amber-50 */
+    --color-pos-auxiliary-text-rgb: 146 64 14;
+    /* amber-800 */
+    --color-pos-conjunction-bg-rgb: 253 244 255;
+    /* fuchsia-50 */
+    --color-pos-conjunction-text-rgb: 134 25 143;
+    /* fuchsia-800 */
+    --color-pos-suffix-bg-rgb: 245 245 244;
+    /* stone-100 */
+    --color-pos-suffix-text-rgb: 87 83 78;
+    /* stone-600 */
+
+    /* Review Card Type Colors */
+    --color-review-jp-en-rgb: 20 184 166;
+    /* teal-500 */
+    --color-review-kanji-read-rgb: 107 33 168;
+    /* purple-700 */
+}
+
+.dark {
+    /* Base Palette - Deep, high-contrast dark theme */
+    --color-background-rgb: 9 9 11;
+    /* zinc-950 - deeper black */
+    --color-surface-rgb: 24 24 27;
+    /* zinc-900 */
+    --color-surface-soft-rgb: 14 14 16;
+    /* zinc-800 */
+    --color-surface-subtle-rgb: 19 19 25;
+    /* zinc-700 */
+    --color-surface-hover-rgb: 82 82 91;
+    /* zinc-600 */
+    --color-border-rgb: 39 39 42;
+    /* zinc-800 */
+    --color-border-strong-rgb: 113 113 122;
+    /* zinc-500 */
+    --color-border-subtle-rgb: 52 52 56;
+    /* zinc-750 */
+
+    /* Text Palette - High contrast for readability */
+    --color-text-primary-rgb: 250 250 250;
+    /* zinc-50 - bright white */
+    --color-text-secondary-rgb: 228 228 231;
+    /* zinc-200 */
+    --color-text-muted-rgb: 161 161 170;
+    /* zinc-400 */
+    --color-text-inverted-rgb: 24 24 27;
+    /* zinc-900 */
+
+    /* Primary (Bright Blue) - High contrast */
+    --color-primary-rgb: 96 165 250;
+    /* blue-400 */
+    --color-primary-focus-rgb: 59 130 246;
+    /* blue-500 */
+    --color-primary-text-rgb: 9 9 11;
+    /* zinc-950 */
+    --color-primary-subtle-bg-rgb: 30 58 138;
+    /* blue-900 */
+    --color-primary-subtle-text-rgb: 191 219 254;
+    /* blue-200 */
+    --color-focus-ring-rgb: 147 197 253;
+    /* blue-300 */
+
+    /* Accent (Bright Teal) */
+    --color-accent-rgb: 45 212 191;
+    /* teal-400 */
+    --color-accent-text-rgb: 153 246 228;
+    /* teal-200 */
+    --color-accent-subtle-bg-rgb: 19 78 74;
+    /* teal-900 */
+    --color-accent-selected-bg-rgb: 17 94 89;
+    /* teal-800 */
+
+    /* Destructive (Bright Red) */
+    --color-destructive-rgb: 248 113 113;
+    /* red-400 */
+    --color-destructive-hover-rgb: 239 68 68;
+    /* red-500 */
+    --color-destructive-subtle-bg-rgb: 127 29 29;
+    /* red-900 */
+    --color-destructive-subtle-text-rgb: 254 202 202;
+    /* red-200 */
+
+    /* Warning (Bright Amber) */
+    --color-warning-text-rgb: 251 191 36;
+    /* amber-400 */
+
+    /* Part of Speech Colors - High contrast, vibrant but not overwhelming */
+    --color-pos-noun-bg-rgb: 30 58 138;
+    /* blue-900 */
+    --color-pos-noun-text-rgb: 191 219 254;
+    /* blue-200 */
+    --color-pos-verb-bg-rgb: 22 78 99;
+    /* cyan-900 */
+    --color-pos-verb-text-rgb: 165 243 252;
+    /* cyan-200 */
+    --color-pos-particle-bg-rgb: 51 65 85;
+    /* slate-800 */
+    --color-pos-particle-text-rgb: 203 213 225;
+    /* slate-300 */
+    --color-pos-adjective-bg-rgb: 76 29 149;
+    /* violet-900 */
+    --color-pos-adjective-text-rgb: 221 214 254;
+    /* violet-200 */
+    --color-pos-adverb-bg-rgb: 19 78 74;
+    /* teal-900 */
+    --color-pos-adverb-text-rgb: 153 246 228;
+    /* teal-200 */
+    --color-pos-auxiliary-bg-rgb: 120 53 15;
+    /* amber-900 */
+    --color-pos-auxiliary-text-rgb: 254 215 170;
+    /* amber-200 */
+    --color-pos-conjunction-bg-rgb: 112 26 117;
+    /* fuchsia-900 */
+    --color-pos-conjunction-text-rgb: 240 171 252;
+    /* fuchsia-200 */
+    --color-pos-suffix-bg-rgb: 68 64 60;
+    /* stone-800 */
+    --color-pos-suffix-text-rgb: 214 211 209;
+    /* stone-300 */
+
+    /* Review Card Type Colors */
+    --color-review-jp-en-rgb: 45 212 191;
+    /* teal-400 */
+    --color-review-kanji-read-rgb: 192 132 252;
+    /* purple-400 */
+}
