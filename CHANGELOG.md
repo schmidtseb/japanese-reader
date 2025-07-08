@@ -5,12 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2025-07-08
+
+### Added
+-   **Review Indicators on Text List**: The "My Texts" list now displays a badge on each text, indicating the number of review items that are currently due for that specific text. This allows users to quickly see which texts need attention.
+
 ## [3.6.0] - 2025-07-06
 
 ### Added
 -   **Progressive Web App (PWA) Functionality**: The application is now a PWA.
     -   A **Service Worker** caches the application shell and assets, allowing for instant loads on subsequent visits and full offline access to the app's interface and already-saved data.
-    -   A **Web App Manifest** allows users to "install" the application to their home screen on desktop and mobile devices for a more native-like experience.
+    -   A **Web App Manifest** allows users to "install" the application to their home screen on desktop and mobile for a more native-like experience.
 
 ## [3.5.1] - 2025-07-06
 

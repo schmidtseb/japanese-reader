@@ -1,7 +1,7 @@
 # Architecture Documentation: Japanese Sentence Analyzer
 
 **arc42 Template Version:** 9.0 (adapted for this project)
-**Last Updated:** 2024-07-08
+**Last Updated:** 2025-07-08
 
 This document provides a comprehensive overview of the architecture for the Japanese Sentence Analyzer, a web-based tool for linguistic analysis and language learning.
 
@@ -16,7 +16,7 @@ The application is a client-side tool designed for Japanese language learners. I
 -   **AI-Powered Analysis:** Leverages the Google Gemini API to break down sentences into morphological segments, providing readings (furigana), pitch accent, parts of speech, and English equivalents.
 -   **Grammar Identification:** The AI identifies and explains grammatical patterns and idiomatic expressions within the text.
 -   **Interactive UI:** Users can click on words and grammar patterns to get detailed information.
--   **Spaced Repetition System (SRS):** Users can add words and grammar patterns to a review deck. The application uses an interactive SRS to schedule items for review, testing users with different quiz types (e.g., translation, reading) to enhance long-term memory retention.
+-   **Spaced Repetition System (SRS):** Users can add words and grammar patterns to a review deck. The application uses an interactive SRS to schedule items for review, testing users with different quiz types (e.g., translation, reading) to enhance long-term memory retention. The "My Texts" list provides an at-a-glance view of which texts have items due for review.
 -   **Reading Mode:** A focused, sentence-by-sentence reading interface to minimize distractions.
 -   **Persistence & Offline Capability:** All user data is stored locally in the browser's IndexedDB. The application is a Progressive Web App (PWA), meaning its interface is available offline and can be "installed" on user devices.
 
@@ -24,7 +24,7 @@ The application is a client-side tool designed for Japanese language learners. I
 
 | Quality Goal      | Motivation                                                                                                   | How it's Achieved                                                                                                                                                                                              |
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Usability**     | The primary users are language learners. The interface must be intuitive, responsive, and helpful.           | Clean, component-based UI. Responsive design (e.g., BottomSheet on mobile, Tooltip on desktop). Hotkeys for power users. Clear visual hierarchy. Dark/Light themes. Adjustable font sizes.                |
+| **Usability**     | The primary users are language learners. The interface must be intuitive, responsive, and helpful.           | Clean, component-based UI. Responsive design (e.g., BottomSheet on mobile, Tooltip on desktop). Hotkeys for power users. Clear visual hierarchy. At-a-glance status indicators (e.g., due review counts). Dark/Light themes. Adjustable font sizes.                |
 | **Performance**   | API calls can be slow and costly. The app must feel fast and responsive during use.                          | **Caching:** All sentence analyses from the Gemini API are cached in IndexedDB. **Prefetching:** In Reading Mode, the next sentence's analysis is fetched in the background. Lightweight state management.      |
 | **Maintainability** | The codebase must be easy to understand, modify, and extend over time.                                      | **TypeScript:** Enforces type safety. **Component-Based:** Code is modularized into React components. **Structured Code:** Code is organized by `features`, `services`, `contexts`, `hooks`, and `utils`. **Unit Tests** for core logic and UI components via Vitest. |
 | **Offline Capability** | Users should be able to use the app interface and review their saved data without an internet connection. | All user data is stored in **IndexedDB**. A **Service Worker** caches all static assets (HTML, JS, CSS, icons), making the application shell fully available offline. New analyses still require an internet connection. |

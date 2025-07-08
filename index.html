@@ -337,13 +337,17 @@
     "@testing-library/jest-dom/": "https://esm.sh/@testing-library/jest-dom@^6.6.3/",
     "@testing-library/react": "https://esm.sh/@testing-library/react@^16.3.0",
     "fake-indexeddb/": "https://esm.sh/fake-indexeddb@^6.0.1/",
-    "wanakana": "https://esm.sh/wanakana@^5.3.1"
+    "wanakana": "https://esm.sh/wanakana@^5.3.1",
+    "bootstrap-icons/": "https://esm.sh/bootstrap-icons@^1.13.1/"
   }
 }
 </script>
   <style type="text/tailwindcss">
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
-    
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+
     @layer utilities {
       /* Custom utility to hide scrollbars */
       .no-scrollbar::-webkit-scrollbar {

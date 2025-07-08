@@ -3,9 +3,18 @@ import { useAppData, useUI, View, TextEntry } from '../contexts/index.ts';
 import { useModal } from './Modal.tsx';
 
 const HistoryItem: React.FC<{ entry: TextEntry }> = ({ entry }) => {
-    const { dispatch: appDataDispatch } = useAppData();
+    const { state: appDataState, dispatch: appDataDispatch } = useAppData();
     const { dispatch: uiDispatch } = useUI();
     const { showConfirmation } = useModal();
+
+    const dueReviewCountForEntry = appDataState.reviewDeck.filter(item => {
+        if (item.textEntryId !== entry.id) {
+            return false;
+        }
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        return item.nextReviewDate <= now.getTime();
+    }).length;
 
     const loadEntry = () => {
         uiDispatch({ type: 'SET_HISTORY_PANEL_OPEN', payload: false });
@@ -23,9 +32,19 @@ const HistoryItem: React.FC<{ entry: TextEntry }> = ({ entry }) => {
     return (
         <li className="text-entry-item group p-4 hover:bg-surface-hover transition-colors flex justify-between items-center">
             <div className="flex-grow pr-4 truncate cursor-pointer" onClick={loadEntry}>
-                <span className="font-medium text-sm pointer-events-none text-text-primary" title={entry.title}>
-                    {entry.title}
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm pointer-events-none text-text-primary" title={entry.title}>
+                        {entry.title}
+                    </span>
+                    {dueReviewCountForEntry > 0 && (
+                        <span 
+                            className="flex-shrink-0 bg-accent text-primary-text text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold pointer-events-none"
+                            title={`${dueReviewCountForEntry} review${dueReviewCountForEntry > 1 ? 's' : ''} due`}
+                        >
+                            {dueReviewCountForEntry}
+                        </span>
+                    )}
+                </div>
                 <span className="block text-xs text-text-muted mt-1 pointer-events-none">
                     Updated: {new Date(entry.updatedAt).toLocaleString()}
                 </span>
