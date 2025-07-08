@@ -11,9 +11,8 @@ const HistoryItem: React.FC<{ entry: TextEntry }> = ({ entry }) => {
         if (item.textEntryId !== entry.id) {
             return false;
         }
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        return item.nextReviewDate <= now.getTime();
+        // New items are always due. Review items are due if their date is past.
+        return item.srsStage === 0 || item.nextReviewDate <= Date.now();
     }).length;
 
     const loadEntry = () => {

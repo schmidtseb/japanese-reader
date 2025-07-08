@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Japanese Sentence Analyzer</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#3b82f6">
@@ -429,6 +429,11 @@
     body {
       @apply bg-background text-text-primary font-reading antialiased transition-colors duration-300;
       font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+      /* Add safe-area padding for iOS PWA mode with fallbacks */
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
     }
     
     /* Hide TTS button if no voices are available */

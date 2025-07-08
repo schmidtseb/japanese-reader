@@ -33,9 +33,8 @@ function Header() {
         if (state.currentTextEntryId && item.textEntryId && item.textEntryId !== state.currentTextEntryId) {
             return false;
         }
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        return item.nextReviewDate <= now.getTime();
+        // New items are always due. Review items are due if their date is past.
+        return item.srsStage === 0 || item.nextReviewDate <= Date.now();
     }).length;
     
   const handleTitleClick = () => {
@@ -96,14 +95,44 @@ const ViewLoader = () => (
 );
 
 export default function App() {
-  const { state: appDataState } = useAppData();
+  const { state: appDataState, dispatch } = useAppData();
   const { state: settingsState } = useSettings();
   
   useHotkeys();
 
   useEffect(() => {
+    // On app load, check if a URL was passed via the Share Target API
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedUrl = urlParams.get('url');
+
+    if (sharedUrl) {
+        dispatch({ type: 'SET_URL_TO_IMPORT', payload: sharedUrl });
+        // Clean the URL from the address bar to prevent re-triggering on refresh
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+    
     loadSpeechSynthesisVoices();
-  }, []);
+  }, [dispatch]);
+
+  useEffect(() => {
+    // App Icon Badging for PWA
+    if ('setAppBadge' in navigator) {
+        // Calculate total due reviews across all texts, including new items.
+        const totalDueCount = appDataState.reviewDeck.filter(item => item.srsStage === 0 || item.nextReviewDate <= Date.now()).length;
+        
+        if (totalDueCount > 0) {
+            // Type assertion to satisfy TypeScript about the experimental API
+            (navigator as any).setAppBadge(totalDueCount).catch((error: any) => {
+                console.error('Failed to set app badge.', error);
+            });
+        } else {
+            (navigator as any).clearAppBadge().catch((error: any) => {
+                console.error('Failed to clear app badge.', error);
+            });
+        }
+    }
+  }, [appDataState.reviewDeck]);
 
   if (appDataState.isLoading || settingsState.isLoading) {
     return (

@@ -33,9 +33,8 @@ function Header() {
         if (state.currentTextEntryId && item.textEntryId && item.textEntryId !== state.currentTextEntryId) {
             return false;
         }
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        return item.nextReviewDate <= now.getTime();
+        // New items are always due. Review items are due if their date is past.
+        return item.srsStage === 0 || item.nextReviewDate <= Date.now();
     }).length;
     
   const handleTitleClick = () => {
@@ -106,6 +105,25 @@ export default function App() {
 
     loadSpeechSynthesisVoices();
   }, [dispatch]);
+
+  useEffect(() => {
+    // App Icon Badging for PWA
+    if ('setAppBadge' in navigator) {
+        // Calculate total due reviews across all texts, including new items.
+        const totalDueCount = appDataState.reviewDeck.filter(item => item.srsStage === 0 || item.nextReviewDate <= Date.now()).length;
+        
+        if (totalDueCount > 0) {
+            // Type assertion to satisfy TypeScript about the experimental API
+            (navigator as any).setAppBadge(totalDueCount).catch((error: any) => {
+                console.error('Failed to set app badge.', error);
+            });
+        } else {
+            (navigator as any).clearAppBadge().catch((error: any) => {
+                console.error('Failed to clear app badge.', error);
+            });
+        }
+    }
+  }, [appDataState.reviewDeck]);
 
   if (appDataState.isLoading || settingsState.isLoading) {
     return (
