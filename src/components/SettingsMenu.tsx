@@ -3,6 +3,7 @@
 
 
 
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useAppData, useSettings, AnalysisDepth, depthLevels } from '../contexts/index.ts';
 import { useModal } from './Modal.tsx';
@@ -24,11 +25,12 @@ const Toggle = ({ label, shortcut, checked, onChange, id }: { label: string, sho
 
 export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
     const { state: settingsState, dispatch: settingsDispatch } = useSettings();
-    const { dispatch: appDataDispatch } = useAppData();
+    const { state: appDataState, dispatch: appDataDispatch } = useAppData();
     const { showAlert, showConfirmation } = useModal();
     const menuRef = useRef<HTMLDivElement>(null);
     const [apiKeyInput, setApiKeyInput] = useState('');
     const [isKeyVisible, setIsKeyVisible] = useState(false);
+    const [notificationPermission, setNotificationPermission] = useState('Notification' in window ? Notification.permission : 'default');
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -53,6 +55,44 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
     const handleSaveApiKey = () => {
         handleSettingChange({ userApiKey: apiKeyInput });
         showAlert('API Key settings updated.');
+    };
+    
+    const handleEnableBadging = async () => {
+        if (!('Notification' in window) || !('setAppBadge' in navigator)) {
+            showAlert('App icon badging is not supported on this browser or device.');
+            return;
+        }
+
+        if (notificationPermission === 'denied') {
+            showAlert('Permission for notifications was denied. You must enable it in your browser or OS settings for this site.');
+            return;
+        }
+
+        if (notificationPermission === 'granted') {
+            showAlert('App icon badging is already enabled.');
+            return;
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            setNotificationPermission(permission); // Update local state for UI feedback
+
+            if (permission === 'granted') {
+                showAlert('Permission granted! The app icon will now show the number of due reviews.');
+                // Manually trigger a badge update immediately.
+                const totalDueCount = appDataState.reviewDeck.filter(item => item.srsStage === 0 || item.nextReviewDate <= Date.now()).length;
+                if (totalDueCount > 0) {
+                    await (navigator as any).setAppBadge(totalDueCount);
+                } else {
+                    await (navigator as any).clearAppBadge();
+                }
+            } else {
+                showAlert('Permission was not granted. App icon badging will remain disabled.');
+            }
+        } catch (error) {
+            console.error('Error requesting notification permission:', error);
+            showAlert('An error occurred while trying to enable badging.');
+        }
     };
 
     const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,6 +173,34 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
     };
 
     const analysisDepthIndex = depthLevels.indexOf(settingsState.analysisDepth);
+    
+    const renderBadgingButton = () => {
+        const statusMap = {
+            granted: { text: 'Badging Enabled', disabled: true, info: 'Review count will show on the app icon.', icon: 'bi-check-circle-fill text-accent-text' },
+            denied: { text: 'Permission Denied', disabled: true, info: 'Enable notifications in browser settings to use this.', icon: 'bi-slash-circle' },
+            default: { text: 'Enable Review Count on Icon', disabled: false, info: 'Requires notification permission to display badges on iOS.', icon: 'bi-app-indicator' },
+        };
+        const badgingStatus = statusMap[notificationPermission];
+
+        return (
+            <div>
+                <p className="text-sm font-medium text-text-secondary mb-3">Home Screen Badges (PWA)</p>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleEnableBadging}
+                        disabled={badgingStatus.disabled}
+                        className="flex-1 text-xs font-medium px-3 py-2 rounded-lg bg-surface-soft text-text-secondary hover:bg-surface-hover transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        <i className={`bi ${badgingStatus.icon}`}></i>
+                        {badgingStatus.text}
+                    </button>
+                </div>
+                <p className="text-xs text-text-muted mt-2 px-1">
+                    {badgingStatus.info}
+                </p>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -224,6 +292,8 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
                             Your key is stored in your browser's database.
                         </p>
                     </div>
+                    <hr className="border-border-subtle" />
+                    {renderBadgingButton()}
                     <hr className="border-border-subtle" />
                     <div>
                         <p className="text-sm font-medium text-text-secondary mb-3">Data Management</p>

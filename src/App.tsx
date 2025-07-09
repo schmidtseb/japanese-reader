@@ -108,12 +108,16 @@ export default function App() {
 
   useEffect(() => {
     // App Icon Badging for PWA
-    if ('setAppBadge' in navigator) {
-        // Calculate total due reviews across all texts, including new items.
+    // This effect runs whenever the review deck changes.
+    // It's responsible for keeping the app icon badge in sync with the number of due reviews.
+    if ('setAppBadge' in navigator && 'Notification' in window) {
+      // On supporting platforms (like iOS 16.4+), notification permission is required to set the badge.
+      // We don't need to ask for permission here; we just act on the current permission state.
+      // The user can grant permission via the Settings menu.
+      if (Notification.permission === 'granted') {
         const totalDueCount = appDataState.reviewDeck.filter(item => item.srsStage === 0 || item.nextReviewDate <= Date.now()).length;
         
         if (totalDueCount > 0) {
-            // Type assertion to satisfy TypeScript about the experimental API
             (navigator as any).setAppBadge(totalDueCount).catch((error: any) => {
                 console.error('Failed to set app badge.', error);
             });
@@ -122,6 +126,13 @@ export default function App() {
                 console.error('Failed to clear app badge.', error);
             });
         }
+      } else {
+        // If permission is not granted (default or denied), ensure the badge is cleared.
+        // This handles cases where permission is revoked.
+        (navigator as any).clearAppBadge().catch((error: any) => {
+            // This might fail if permission was never asked, that's okay.
+        });
+      }
     }
   }, [appDataState.reviewDeck]);
 

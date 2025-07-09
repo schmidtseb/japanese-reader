@@ -167,7 +167,7 @@ const ReviewController = () => {
         }
     };
 
-    const handleQuizAnswer = (quizQuestion: { item: ReviewItem, quizType?: WordQuizType }, remembered: boolean) => {
+    const handleQuizAnswer = (quizQuestion: { item: ReviewItem; quizType?: WordQuizType }, remembered: boolean) => {
         const newQueue = [...quizQueue];
         const itemJustAnswered = newQueue.shift(); // Take the current item off the front
 
@@ -218,26 +218,25 @@ const ReviewController = () => {
             quality = isCorrectOrQuality; // For grammar cards
         }
 
-        if (quality === 1) {
-            if (!penalizedInSession.has(item.id)) {
-                const updatedItem = calculateNextReview(item, quality);
-                dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
-                setPenalizedInSession(prev => new Set(prev).add(item.id));
-            }
+        if (quality === 1) { // "Again" -> Incorrect
+            // Mark as penalized for this session.
+            setPenalizedInSession(prev => new Set(prev).add(item.id));
+            
+            // Move item to the back of the queue for another try in this session.
+            // The database is NOT updated. The item remains "due" until a correct answer is given.
             setReviewSubQueue(prevQueue => {
                 const rest = prevQueue.slice(1);
                 return [...rest, currentQueueItem];
             });
-        } else {
-            if (penalizedInSession.has(item.id)) {
-                setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
-                setReviewSubQueue(prevQueue => prevQueue.slice(1));
-            } else {
-                const updatedItem = calculateNextReview(item, quality);
-                dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
-                setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
-                setReviewSubQueue(prevQueue => prevQueue.slice(1));
-            }
+        } else { // Correct answer (quality > 1)
+            // A correct answer updates the DB with the new SRS stage and review date.
+            const updatedItem = calculateNextReview(item, quality);
+            dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: updatedItem });
+            
+            setSessionStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
+            
+            // Remove item from the front of the queue as it's been successfully reviewed.
+            setReviewSubQueue(prevQueue => prevQueue.slice(1));
         }
         
         // This must be called for every answer to ensure the card component resets its internal state.

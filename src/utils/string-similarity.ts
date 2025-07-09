@@ -34,7 +34,7 @@ function levenshtein(a: string, b: string): number {
 
 /**
  * Compares two strings for similarity, allowing for minor typos and variations in the correct answer.
- * Handles multiple answers separated by '/' or ',', and information in parentheses.
+ * Handles multiple answers separated by '/', ',', or ';', and information in parentheses.
  * @param userInput The string provided by the user.
  * @param correctAnswer The correct string to compare against, which may contain variations.
  * @returns A boolean indicating if the strings are similar enough to be considered correct.
@@ -53,10 +53,10 @@ export function isSimilar(userInput: string, correctAnswer: string): boolean {
 
     // Create a set of possible answers.
     // 1. Answers with parentheses content removed. e.g., "to go (out)" -> "to go"
-    const baseAnswers = s2.replace(/\s*\([^)]*\)/g, '').trim().split(/[,/]/).map(s => s.trim()).filter(Boolean);
+    const baseAnswers = s2.replace(/\s*\([^)]*\)/g, '').trim().split(/[,\/;]/).map(s => s.trim()).filter(Boolean);
     
     // 2. Answers with parentheses characters removed, keeping the content. e.g., "to go (out)" -> "to go out"
-    const expandedAnswers = s2.replace(/[()]/g, '').trim().split(/[,/]/).map(s => s.trim()).filter(Boolean);
+    const expandedAnswers = s2.replace(/[()]/g, '').trim().split(/[,\/;]/).map(s => s.trim()).filter(Boolean);
     
     // Combine and get unique answers
     const allPossibleAnswers = [...new Set([...baseAnswers, ...expandedAnswers])];
