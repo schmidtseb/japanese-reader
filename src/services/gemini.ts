@@ -105,11 +105,25 @@ const analyzeSentenceApi = (supabase: SupabaseClient | null, sentence: string, d
     const promise = (async () => {
         try {
             const ai = await getGenAI(supabase);
-            const sanitizedSentence = sentence.trim().replace(/^[「『]/, '').replace(/[」』]$/, '').trim();
-            if (!sanitizedSentence) {
+            const sentenceToAnalyze = sentence.trim();
+
+            // If the trimmed sentence is empty, don't call the API.
+            if (!sentenceToAnalyze) {
                 return {
                     original_japanese_sentence: sentence,
-                    analysis: [{ japanese_segment: sentence, reading: sentence, category: 'PUNCTUATION', english_equivalent: 'Punctuation/Quotes', pitch_accent: '' }],
+                    analysis: [],
+                    grammar_patterns: [],
+                    english_translation: '(Empty sentence)'
+                };
+            }
+            
+            // Heuristic: If the sentence consists only of punctuation, quotes, and whitespace,
+            // don't call the API and return a simple analysis to avoid errors or wasted calls.
+            const contentOnly = sentenceToAnalyze.replace(/[「」『』。？！、\s]/g, '');
+            if (contentOnly.length === 0) {
+                return {
+                    original_japanese_sentence: sentence,
+                    analysis: [{ japanese_segment: sentenceToAnalyze, reading: sentenceToAnalyze, category: 'PUNCTUATION', english_equivalent: 'Punctuation/Quotes', pitch_accent: '' }],
                     grammar_patterns: [],
                     english_translation: '(Sentence consists only of punctuation)'
                 };
@@ -117,7 +131,7 @@ const analyzeSentenceApi = (supabase: SupabaseClient | null, sentence: string, d
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: sanitizedSentence,
+                contents: sentenceToAnalyze,
                 config: {
                     systemInstruction: getSystemPrompt(depth),
                     responseMimeType: 'application/json',

@@ -16,11 +16,13 @@ export const ReadingModeView = () => {
     const { dispatch: uiDispatch } = useUI();
     const [isHeaderVisible, setIsHeaderVisible] = useState(false);
     const [isFloatingNavVisible, setIsFloatingNavVisible] = useState(true);
+    const [animationClass, setAnimationClass] = useState('');
 
     const headerTimerRef = useRef<number | null>(null);
     const floatingNavInactivityTimerRef = useRef<number | null>(null);
     const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const quizInitiationSentenceRef = useRef<string | null>(null);
     
     const [availableQuizText, setAvailableQuizText] = useState<string | null>(null);
     const [showQuiz, setShowQuiz] = useState(false);
@@ -42,20 +44,22 @@ export const ReadingModeView = () => {
 
     const handleStartQuiz = () => {
         if (availableQuizText) {
+            quizInitiationSentenceRef.current = sentence;
             generateQuiz(availableQuizText);
         }
     };
     
     useEffect(() => {
-        if (quizData) {
+        if (quizData && sentence === quizInitiationSentenceRef.current) {
             setShowQuiz(true);
             setAvailableQuizText(null); // Hide indicator once quiz is shown
         }
-    }, [quizData]);
+    }, [quizData, sentence]);
 
     const handleCloseQuiz = () => {
         setShowQuiz(false);
         resetQuiz();
+        quizInitiationSentenceRef.current = null;
     };
 
     // --- UI Visibility & Navigation Logic ---
@@ -91,6 +95,7 @@ export const ReadingModeView = () => {
         const canNavPrev = dir === 'prev' && sentenceIndex > 0;
         const canNavNext = dir === 'next' && sentenceIndex < sentences.length - 1;
         if (canNavPrev || canNavNext) {
+            setAnimationClass(dir === 'next' ? 'animate-page-flip-next' : 'animate-page-flip-prev');
             appDataDispatch({ type: 'NAVIGATE_SENTENCE', payload: { direction: dir }});
             if (navigator.vibrate) navigator.vibrate(10);
             handleActivity();
@@ -152,6 +157,7 @@ export const ReadingModeView = () => {
         // When the sentence changes, cancel any ongoing quiz generation and hide the quiz.
         resetQuiz();
         setShowQuiz(false);
+        quizInitiationSentenceRef.current = null;
 
     }, [sentence, uiDispatch, handleActivity, resetQuiz]);
     
@@ -236,31 +242,36 @@ export const ReadingModeView = () => {
                 totalSentences={sentences.length}
             />
             <main className="flex-1 flex flex-col min-h-0">
-                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 no-scrollbar">
-                    {(() => {
-                        if (!sentence) {
-                            // This state is hit when readingProgress >= sentences.length
-                            return (
-                                <div className="text-center p-8 text-text-muted flex flex-col items-center justify-center h-full">
-                                    <h2 className="text-2xl font-bold text-text-primary mb-4">End of Text</h2>
-                                    <p className="mb-6">You've finished reading. Ready to test your knowledge?</p>
-                                     <button onClick={handleStartQuiz} className="btn-primary" disabled={isQuizLoading || !availableQuizText}>
-                                        {isQuizLoading ? (
-                                            <><i className="bi bi-arrow-repeat animate-spin mr-2"></i> Generating Quiz...</>
-                                        ) : ("Test My Comprehension")}
-                                    </button>
-                                    {quizError && <ErrorComponent error={quizError} onRetry={handleStartQuiz} />}
-                                </div>
-                            );
-                        }
-                        if (analysisError) {
-                            return <ErrorComponent error={analysisError} onRetry={reanalyze} />;
-                        }
-                        if (analysis) {
-                            return <AnalysisView analysis={analysis} onReanalyze={reanalyze} availableQuizText={availableQuizText} onStartQuiz={handleStartQuiz} isQuizLoading={isQuizLoading} />;
-                        }
-                        return <AnalysisPlaceholder sentence={sentence} isLoading={isAnalysisLoading} />;
-                    })()}
+                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 no-scrollbar" style={{ perspective: '1500px' }}>
+                    <div
+                        className={animationClass}
+                        onAnimationEnd={() => setAnimationClass('')}
+                    >
+                        {(() => {
+                            if (!sentence) {
+                                // This state is hit when readingProgress >= sentences.length
+                                return (
+                                    <div className="text-center p-8 text-text-muted flex flex-col items-center justify-center h-full">
+                                        <h2 className="text-2xl font-bold text-text-primary mb-4">End of Text</h2>
+                                        <p className="mb-6">You've finished reading. Ready to test your knowledge?</p>
+                                         <button onClick={handleStartQuiz} className="btn-primary" disabled={isQuizLoading || !availableQuizText}>
+                                            {isQuizLoading ? (
+                                                <><i className="bi bi-arrow-repeat animate-spin mr-2"></i> Generating Quiz...</>
+                                            ) : ("Test My Comprehension")}
+                                        </button>
+                                        {quizError && <ErrorComponent error={quizError} onRetry={handleStartQuiz} />}
+                                    </div>
+                                );
+                            }
+                            if (analysisError) {
+                                return <ErrorComponent error={analysisError} onRetry={reanalyze} />;
+                            }
+                            if (analysis) {
+                                return <AnalysisView analysis={analysis} onReanalyze={reanalyze} availableQuizText={availableQuizText} onStartQuiz={handleStartQuiz} isQuizLoading={isQuizLoading} />;
+                            }
+                            return <AnalysisPlaceholder sentence={sentence} isLoading={isAnalysisLoading} />;
+                        })()}
+                    </div>
                 </div>
             </main>
             {showQuiz && quizData && <ComprehensionQuiz quizData={quizData} onClose={handleCloseQuiz} />}
