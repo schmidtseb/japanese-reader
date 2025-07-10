@@ -334,23 +334,14 @@ export function AppDataProvider({ children, _testDispatch, _testState }: AppData
                     break;
                 }
                 case 'CACHE_ANALYSIS': {
-                    // This action updates the state first, so we need to get the updated entry from there.
-                    // A better way would be to get it from the reducer, but this works for now.
-                    // This creates a dependency on state which might be slightly stale, but it's acceptable.
-                    const updatedEntry = state.history.find(e => e.id === action.payload.entryId);
-                    if (updatedEntry) {
-                       const entryToUpsert = {
-                           id: updatedEntry.id,
-                           user_id: user.id,
-                           title: updatedEntry.title,
-                           text: updatedEntry.text,
-                           reading_progress: updatedEntry.readingProgress,
-                           analyzed_sentences: updatedEntry.analyzedSentences,
-                           created_at: new Date(updatedEntry.createdAt).toISOString(),
-                           updated_at: new Date(updatedEntry.updatedAt).toISOString(),
-                       };
-                       await supabase.from('text_entries').upsert(entryToUpsert);
-                    }
+                    const { entryId, sentence, depth, analysis } = action.payload;
+                    const { error } = await supabase.rpc('update_sentence_analysis', {
+                        entry_id: entryId,
+                        sentence_key: sentence,
+                        depth_key: depth,
+                        analysis_data: analysis,
+                    });
+                    if (error) throw error;
                     break;
                 }
                 case 'REMOVE_TEXT_ENTRY':
@@ -384,7 +375,7 @@ export function AppDataProvider({ children, _testDispatch, _testState }: AppData
             console.error("Supabase sync failed:", error);
             // Here one could dispatch a "SYNC_FAILED" action to show a UI indicator
         }
-    }, [user, supabase, state.history]);
+    }, [user, supabase]);
     
     const finalDispatch = _testDispatch || syncedDispatch as Dispatch<AppDataAction>;
 

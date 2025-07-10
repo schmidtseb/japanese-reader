@@ -61,25 +61,48 @@ ALTER TABLE public.review_deck ENABLE ROW LEVEL SECURITY;
 -- =================================================================
 -- 5. Create RLS Policies
 -- =================================================================
+-- This section creates the Row Level Security policies.
+-- We drop existing policies first to make this script safely re-runnable.
 
--- Policies for user_profiles
+-- --- user_profiles policies ---
+DROP POLICY IF EXISTS "Users can view their own profile." ON public.user_profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile." ON public.user_profiles;
+DROP POLICY IF EXISTS "Users can update their own profile." ON public.user_profiles;
+
 CREATE POLICY "Users can view their own profile."
 ON public.user_profiles FOR SELECT
 USING (auth.uid() = id);
 
+-- This policy is crucial. It allows a user to create their own profile row.
+-- This makes the `upsert` in the edge function work even for users created
+-- before the `handle_new_user` trigger existed, fixing the RLS violation error.
+CREATE POLICY "Users can insert their own profile."
+ON public.user_profiles FOR INSERT
+WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Users can update their own profile."
 ON public.user_profiles FOR UPDATE
-USING (auth.uid() = id);
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
 
--- Policies for text_entries
+
+-- --- text_entries policies ---
+DROP POLICY IF EXISTS "Users can manage their own text entries." ON public.text_entries;
+
 CREATE POLICY "Users can manage their own text entries."
 ON public.text_entries FOR ALL
-USING (auth.uid() = user_id);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
--- Policies for review_deck
+
+-- --- review_deck policies ---
+DROP POLICY IF EXISTS "Users can manage their own review deck items." ON public.review_deck;
+
 CREATE POLICY "Users can manage their own review deck items."
 ON public.review_deck FOR ALL
-USING (auth.uid() = user_id);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
 
 -- =================================================================
 -- 6. Create Helper Function for New User Profiles
@@ -104,10 +127,67 @@ $$;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+  
+-- =================================================================
+-- 8. Add updated_at Triggers
+-- =================================================================
+-- This helper function is called by triggers to update the `updated_at` column.
+CREATE OR REPLACE FUNCTION public.moddatetime(regclass)
+RETURNS trigger AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for user_profiles
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.user_profiles
+  FOR EACH ROW EXECUTE PROCEDURE public.moddatetime('updated_at');
+  
+-- Trigger for text_entries
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.text_entries
+  FOR EACH ROW EXECUTE PROCEDURE public.moddatetime('updated_at');
 
 -- =================================================================
--- 8. Add Indices for Performance
+-- 9. Add Indices for Performance
 -- =================================================================
 CREATE INDEX idx_text_entries_user_id ON public.text_entries(user_id);
 CREATE INDEX idx_review_deck_user_id ON public.review_deck(user_id);
 CREATE INDEX idx_review_deck_next_review_date ON public.review_deck(next_review_date);
+
+-- =================================================================
+-- 10. Performance Optimization Functions
+-- =================================================================
+
+-- This function allows for partially updating the `analyzed_sentences` JSONB column
+-- without sending the entire object over the network.
+CREATE OR REPLACE FUNCTION public.update_sentence_analysis(entry_id uuid, sentence_key text, depth_key text, analysis_data jsonb)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE public.text_entries
+  SET
+    -- First, ensure the top-level sentence key exists as a JSONB object.
+    -- Then, set the nested depth key with the new analysis data.
+    -- The `true` parameter creates the keys if they don't exist.
+    analyzed_sentences = jsonb_set(
+      jsonb_set(
+          analyzed_sentences,
+          ARRAY[sentence_key],
+          '{}'::jsonb,
+          true
+      ),
+      ARRAY[sentence_key, depth_key],
+      analysis_data,
+      true
+    ),
+    updated_at = now()
+  WHERE
+    id = entry_id AND user_id = auth.uid();
+END;
+$$;
+
+-- Grant permission to authenticated users to call this function.
+-- RLS policies on the table are still respected implicitly through the `WHERE user_id = auth.uid()` clause.
+GRANT EXECUTE ON FUNCTION public.update_sentence_analysis(uuid, text, text, jsonb) TO authenticated;

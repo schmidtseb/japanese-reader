@@ -69,9 +69,11 @@ This application uses environment variables for configuration.
     supabase link --project-ref <your-project-ref>
     ```
     
-4.  Set up secrets for your Supabase Edge Functions. In your Supabase dashboard under Project Settings > Edge Functions, add the following secrets:
-    -   `ENCRYPTION_KEY`: A 32-character string for encrypting API keys (e.g., generate one with `openssl rand -base64 32`).
-    -   `JWT_SECRET`: Your project's JWT Secret from Project Settings > API.
+4.  **Set up secrets for your Supabase Edge Functions.** In your Supabase dashboard under Project Settings > Edge Functions, add the following secrets:
+    -   **`ENCRYPTION_KEY`**: A random string that is **exactly 32 characters long**. This is critical for AES-256 encryption.
+        -   **To generate a valid key**, you can use a password manager or run this command in your terminal: `openssl rand -hex 16` (This generates 16 random bytes and represents them as 32 hexadecimal characters).
+        -   **Important:** Using a key of any other length will cause an "Invalid key length" error in the functions.
+    -   **`JWT_SECRET`**: Your project's JWT Secret from Project Settings > API.
 
 5.  **Configure OAuth Redirect URLs:** For Google Sign-In to work correctly, you must tell Supabase which URLs are allowed for redirection after a user authenticates.
     -   Go to your Supabase project dashboard.
@@ -86,7 +88,7 @@ This application uses environment variables for configuration.
 
 ### Supabase Database & Functions Setup
 
-1.  **Database Schema**: Run the SQL script from `supabase_schema.sql` in your project's **SQL Editor** on the Supabase dashboard. This will create the necessary tables and policies.
+1.  **Database Schema**: Run the SQL script from `supabase_schema.txt` in your project's **SQL Editor** on the Supabase dashboard. This will create the necessary tables, policies, and helper triggers. If you have an older version of the schema, it is safe to re-run the entire script.
 2.  **Edge Functions**: Deploy the provided Edge Functions, which are required for secure API key handling.
     ```bash
     supabase functions deploy
