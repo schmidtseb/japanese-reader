@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppData, ReviewItem, ReviewQuality, View, useSettings } from '../../contexts/index.ts';
 import { calculateNextReview } from '../../services/srs.ts';
@@ -17,7 +18,7 @@ const CHUNK_SIZE = 5;
 
 export type WordQuizType = 'jp-en' | 'kanji-read';
 
-const ReviewController = () => {
+export const ReviewController = () => {
     const { state, dispatch } = useAppData();
     const { state: settingsState } = useSettings();
     const { showConfirmation } = useModal();
@@ -356,5 +357,3 @@ const ReviewController = () => {
             return <div className="p-6 text-center text-text-muted">An unexpected error occurred.</div>;
     }
 };
-
-export default ReviewController;

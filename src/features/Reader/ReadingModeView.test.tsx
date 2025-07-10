@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { screen, fireEvent, render, waitFor } from '@testing-library/react';
 import { AppDataProvider, AppDataState, SettingsProvider, SettingsState, UIProvider, View, TextEntry } from '../../contexts';
 import { ModalProvider } from '../../components/Modal.tsx';
-import ReadingModeView from './ReadingModeView';
+import { ReadingModeView } from './ReadingModeView';
 import { useSentenceAnalysis } from '../../hooks/useSentenceAnalysis.ts';
 
 // Mock the analysis hook, as it makes external API calls
@@ -18,6 +18,7 @@ vi.mock('../../services/gemini', async (importOriginal) => {
     return {
         ...actual,
         useAnalyzeSentence: () => ({ execute: vi.fn().mockResolvedValue(null) }),
+        useGenerateComprehensionQuiz: () => ({ execute: vi.fn(), reset: vi.fn() }),
     };
 });
 

@@ -81,3 +81,61 @@ You must respond ONLY with a JSON object that adheres to the specified schema.
 If no valid Japanese article text can be found on the page, the 'japanese_text' field in your JSON response must be an empty string. The 'title' can still be populated if found.
 `;
 }
+
+/**
+ * Creates a system prompt for requesting detailed information about a single Kanji.
+ * @returns A system prompt string.
+ */
+export function getKanjiDetailsPrompt(): string {
+    return `You are an expert Japanese lexicographer and teacher.
+Your task is to take a single Japanese Kanji character and provide a detailed, structured analysis according to the specified JSON schema.
+
+Detailed Task Breakdown:
+1.  **Character Identification**: Confirm the Kanji character.
+2.  **Meaning**: Provide the most common and important English meanings.
+3.  **Readings**:
+    *   **On'yomi**: Provide the Sino-Japanese readings in KATAKANA. If there are multiple, separate them with a comma.
+    *   **Kun'yomi**: Provide the native Japanese readings in HIRAGANA. If there are multiple, separate them with a comma.
+4.  **Details**:
+    *   **JLPT Level**: State the JLPT level (N5, N4, N3, N2, N1). If it's not on the JLPT list, use "N/A".
+    *   **Stroke Count**: Provide the correct stroke count for the character.
+5.  **Example Words**: Provide 2-3 common and useful example words that use this Kanji. For each example, give the word, its reading in hiragana, and its English meaning.
+
+Input is a single Kanji character. You must respond ONLY with the JSON object defined in the schema. Do not add any conversational text or markdown fences.`;
+}
+
+/**
+ * Creates a system prompt for requesting detailed analysis of a single word.
+ * @returns A system prompt string.
+ */
+export function getWordDetailsPrompt(): string {
+    return `You are a Japanese language dictionary and teacher.
+Your task is to take a Japanese word and its reading, and provide a detailed, structured analysis according to the specified JSON schema.
+
+Detailed Task Breakdown:
+1.  **Word Identification**: Confirm the word and its reading.
+2.  **Part of Speech**: Provide the primary part of speech for the word (e.g., 'Noun', 'Ichidan verb', 'Na-adjective').
+3.  **Definition**: Provide a clear and concise English definition.
+4.  **Example Sentences**: Provide 2-3 distinct and useful example sentences that use this word. For each example, give the full Japanese sentence, its complete reading in hiragana, and its English translation.
+
+The user's input will be in the format: \`Analyze the word "WORD" with the reading "READING".\`
+
+You must respond ONLY with the JSON object defined in the schema. Do not add any conversational text or markdown fences.`;
+}
+
+/**
+ * Creates a system prompt for generating a reading comprehension quiz.
+ * @returns A system prompt string.
+ */
+export function getComprehensionQuizPrompt(): string {
+    return `You are an expert Japanese language curriculum designer, specializing in creating JLPT-style reading comprehension questions.
+You will be given a Japanese text as input.
+
+Your task is to perform the following actions:
+1.  **Analyze Difficulty**: Read the entire text and analyze its vocabulary, kanji, and grammatical complexity. Based on this analysis, determine the most appropriate JLPT level this text corresponds to (N5, N4, N3, N2, or N1).
+2.  **Create Quiz**: Generate a short, multiple-choice quiz of 3-5 questions. The questions should be in English and test the reader's understanding of the text's content, purpose, and nuance. Do not ask about individual vocabulary words.
+3.  **Generate Plausible Options**: For each question, create four possible answers (A, B, C, D). One answer must be correct, and the other three must be plausible but incorrect distractors based on the text.
+4.  **Provide Explanations**: For each question, provide a brief explanation for why the correct answer is right, referencing details from the text.
+
+You MUST respond ONLY with a JSON object that adheres to the specified schema. Do not add any conversational text or markdown fences.`;
+}

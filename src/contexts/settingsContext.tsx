@@ -69,11 +69,11 @@ const settingsReducer = (state: SettingsState, action: Action): SettingsState =>
                     settingsToSave.userApiKey = null;
                 }
             }
-
+            
             db.saveSettings(settingsToSave);
             applySettingsToDOM(newSettings);
 
-            return newSettings;
+            return { ...state, ...newSettings };
         }
         default:
             return state;

@@ -5,7 +5,7 @@ import { AnalysisView } from './AnalysisView.tsx';
 import { ErrorComponent } from '../../components/ErrorComponent.tsx';
 import { AnalysisPlaceholder } from './components/AnalysisPlaceholder.tsx';
 
-const ReaderView = () => {
+export const ReaderView = () => {
     const { state, dispatch } = useAppData();
     const currentEntry = state.history.find(e => e.id === state.currentTextEntryId);
 
@@ -109,7 +109,7 @@ const ReaderView = () => {
                                 return <ErrorComponent error={error} onRetry={reanalyze} />;
                             }
                             if (analysis) {
-                                return <AnalysisView analysis={analysis} onReanalyze={reanalyze} />;
+                                return <AnalysisView analysis={analysis} onReanalyze={reanalyze} availableQuizText={null} onStartQuiz={() => {}} isQuizLoading={false} />;
                             }
                             return <AnalysisPlaceholder sentence={state.selectedSentence} isLoading={isLoading} />;
                         })()}
@@ -119,4 +119,3 @@ const ReaderView = () => {
         </div>
     );
 };
-export default ReaderView;

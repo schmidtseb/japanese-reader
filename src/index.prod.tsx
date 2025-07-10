@@ -8,7 +8,8 @@ import './index.css';
 
 import { createRoot } from 'react-dom/client';
 import { 
-    AppDataProvider, 
+    AppDataProvider,
+    AuthProvider,
     SettingsProvider, 
     UIProvider, 
 } from './contexts/index.ts';
@@ -19,11 +20,13 @@ function Main() {
   return (
     <SettingsProvider>
       <UIProvider>
-        <AppDataProvider>
-          <ModalProvider>
-            <App />
-          </ModalProvider>
-        </AppDataProvider>
+        <ModalProvider>
+          <AuthProvider>
+            <AppDataProvider>
+              <App />
+            </AppDataProvider>
+          </AuthProvider>
+        </ModalProvider>
       </UIProvider>
     </SettingsProvider>
   );

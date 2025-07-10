@@ -25,6 +25,7 @@ type Action =
   | { type: 'HIDE_TOOLTIP' }
   | { type: 'PIN_TOOLTIP'; payload: { content: React.ReactNode; position: { top: number; left: number }; targetElement: HTMLElement | null } }
   | { type: 'SHOW_BOTTOM_SHEET'; payload: { content: { title: string; body: React.ReactNode }; targetElement: HTMLElement | null } }
+  | { type: 'SET_BOTTOM_SHEET_TITLE'; payload: string }
   | { type: 'HIDE_BOTTOM_SHEET' };
 
 // --- INITIAL STATE ---
@@ -57,6 +58,16 @@ const uiReducer = (state: UIState, action: Action): UIState => {
             document.body.classList.add('overflow-hidden', 'md:overflow-auto');
             return { ...state, bottomSheet: { visible: true, ...action.payload } };
 
+        case 'SET_BOTTOM_SHEET_TITLE':
+            if (!state.bottomSheet.visible) return state; // Only update if visible
+            return {
+                ...state,
+                bottomSheet: {
+                    ...state.bottomSheet,
+                    content: { ...state.bottomSheet.content, title: action.payload }
+                }
+            };
+        
         case 'HIDE_BOTTOM_SHEET':
             document.body.classList.remove('overflow-hidden', 'md:overflow-auto');
             return { ...state, bottomSheet: { ...initialState.bottomSheet } };

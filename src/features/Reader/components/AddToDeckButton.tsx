@@ -1,12 +1,30 @@
 // src/features/Reader/components/AddToDeckButton.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAppData } from '../../../contexts/index.ts';
 import { useModal } from '../../../components/Modal.tsx';
 
-export function AddToDeckButton({ itemId, itemType, itemContent }: { itemId: string, itemType: 'word' | 'grammar', itemContent: object }) {
+export function AddToDeckButton({ itemType, itemContent }: { itemType: 'word' | 'grammar', itemContent: any }) {
     const { state, dispatch } = useAppData();
     const { showAlert } = useModal();
-    const isInDeck = !!state.reviewDeck.find(i => i.id === itemId);
+    
+    const existingItem = useMemo(() => {
+        if (itemType === 'word') {
+            return state.reviewDeck.find(i =>
+                i.type === 'word' &&
+                i.content.japanese_segment === itemContent.japanese_segment &&
+                i.content.reading === itemContent.reading
+            );
+        }
+        if (itemType === 'grammar') {
+            return state.reviewDeck.find(i =>
+                i.type === 'grammar' &&
+                i.content.pattern_name === itemContent.pattern_name
+            );
+        }
+        return undefined;
+    }, [state.reviewDeck, itemType, itemContent]);
+
+    const isInDeck = !!existingItem;
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -18,13 +36,11 @@ export function AddToDeckButton({ itemId, itemType, itemContent }: { itemId: str
             return;
         }
 
-        const actionType = isInDeck ? 'REMOVE_REVIEW_ITEM' : 'ADD_OR_UPDATE_REVIEW_ITEM';
-        
-        if (actionType === 'REMOVE_REVIEW_ITEM') {
-            dispatch({ type: actionType, payload: itemId });
+        if (isInDeck) {
+            dispatch({ type: 'REMOVE_REVIEW_ITEM', payload: existingItem.id });
         } else {
              const newItem = {
-                id: itemId,
+                id: crypto.randomUUID(),
                 type: itemType,
                 content: itemContent,
                 textEntryId: currentTextEntryId,
@@ -34,7 +50,7 @@ export function AddToDeckButton({ itemId, itemType, itemContent }: { itemId: str
                 nextReviewDate: new Date().setHours(0,0,0,0),
                 addedAt: Date.now(),
             };
-            dispatch({ type: actionType, payload: newItem });
+            dispatch({ type: 'ADD_OR_UPDATE_REVIEW_ITEM', payload: newItem });
         }
     };
     

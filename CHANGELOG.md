@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2025-07-11
+
+### Added
+-   **Supabase Cloud Sync & Auth**: Implemented optional cloud backup and synchronization functionality using Supabase.
+    -   Users can now configure their Supabase credentials in the settings.
+    -   Added full authentication (Sign Up, Sign In, Sign Out).
+    -   A new "Account" section in the settings menu provides access to auth and sync controls.
+    -   Implemented a robust data merging strategy for the initial sync to combine local and cloud data.
+    -   Subsequent changes to texts or the review deck are automatically pushed to Supabase when the user is logged in, ensuring data stays current across devices.
+
+## [4.0.0] - 2025-07-10
+
+### Added
+-   **AI-Powered Reading Comprehension Quiz**: A major new learning feature has been added.
+    -   After finishing a paragraph or an entire text, a "Test Comprehension" icon appears.
+    -   Clicking the icon uses the Gemini API to generate a short, multiple-choice quiz based on the content just read.
+    -   The AI assesses the text's difficulty and assigns an estimated JLPT level.
+    -   The quiz is presented in a full-screen, focused modal view with instant feedback and a final score summary.
+    -   This feature turns passive reading into an active learning exercise, helping users verify their understanding.
+
+### Fixed
+-   The layout of the analyzed sentence header has been improved to correctly contain both short sentences and the action icons, preventing visual overlap.
+
+## [3.9.0] - 2025-07-09
+
+### Added
+-   **Word Analysis**: Building on the Kanji details feature, users can now perform a "deep dive" on whole words. An "Analyze Word" button in the segment popup provides a detailed definition and contextual example sentences, keeping the user within the app for deeper study.
+
+## [3.8.0] - 2025-07-09
+
+### Added
+-   **In-App Kanji Details**: Clicking on individual Kanji characters now opens a popup directly within the app, providing detailed information powered by the Gemini API. This includes On'yomi and Kun'yomi readings, English meanings, JLPT level, stroke count, and common example words. This replaces the previous behavior of linking out to an external dictionary.
+
 ## [3.7.0] - 2025-07-08
 
 ### Added

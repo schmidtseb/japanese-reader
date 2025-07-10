@@ -1,0 +1,113 @@
+-- supabase_schema.sql
+
+-- =================================================================
+-- 1. Create User Profiles Table
+-- =================================================================
+-- This table stores public information about users that you want to be
+-- accessible to other users. We'll also store the encrypted API key here.
+CREATE TABLE public.user_profiles (
+  id uuid NOT NULL,
+  updated_at timestamptz NULL,
+  encrypted_api_key text NULL,
+  CONSTRAINT user_profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+-- =================================================================
+-- 2. Create Text Entries Table
+-- =================================================================
+-- This table stores the main text content that users save for analysis.
+CREATE TABLE public.text_entries (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  text text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  reading_progress integer NOT NULL DEFAULT 0,
+  analyzed_sentences jsonb NULL DEFAULT '{}'::jsonb,
+  CONSTRAINT text_entries_pkey PRIMARY KEY (id),
+  CONSTRAINT text_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+-- =================================================================
+-- 3. Create Review Deck Table
+-- =================================================================
+-- This table stores the Spaced Repetition System (SRS) items.
+CREATE TABLE public.review_deck (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  text_entry_id uuid NULL,
+  type text NOT NULL,
+  content jsonb NOT NULL,
+  srs_stage integer NOT NULL DEFAULT 0,
+  interval_modifier double precision NOT NULL DEFAULT 1.0,
+  incorrect_answer_count integer NOT NULL DEFAULT 0,
+  next_review_date timestamptz NOT NULL,
+  added_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT review_deck_pkey PRIMARY KEY (id),
+  CONSTRAINT review_deck_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+  CONSTRAINT review_deck_text_entry_id_fkey FOREIGN KEY (text_entry_id) REFERENCES public.text_entries(id) ON DELETE SET NULL
+);
+
+-- =================================================================
+-- 4. Enable Row Level Security (RLS)
+-- =================================================================
+-- Always enable RLS on tables that contain user data.
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.text_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.review_deck ENABLE ROW LEVEL SECURITY;
+
+-- =================================================================
+-- 5. Create RLS Policies
+-- =================================================================
+
+-- Policies for user_profiles
+CREATE POLICY "Users can view their own profile."
+ON public.user_profiles FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile."
+ON public.user_profiles FOR UPDATE
+USING (auth.uid() = id);
+
+-- Policies for text_entries
+CREATE POLICY "Users can manage their own text entries."
+ON public.text_entries FOR ALL
+USING (auth.uid() = user_id);
+
+-- Policies for review_deck
+CREATE POLICY "Users can manage their own review deck items."
+ON public.review_deck FOR ALL
+USING (auth.uid() = user_id);
+
+-- =================================================================
+-- 6. Create Helper Function for New User Profiles
+-- =================================================================
+-- This function automatically creates a profile entry when a new user signs up.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.user_profiles (id)
+  VALUES (new.id);
+  RETURN new;
+END;
+$$;
+
+-- =================================================================
+-- 7. Create Trigger for New User Profiles
+-- =================================================================
+-- This trigger calls the function whenever a user is created in the auth.users table.
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- =================================================================
+-- 8. Add Indices for Performance
+-- =================================================================
+CREATE INDEX idx_text_entries_user_id ON public.text_entries(user_id);
+CREATE INDEX idx_review_deck_user_id ON public.review_deck(user_id);
+CREATE INDEX idx_review_deck_next_review_date ON public.review_deck(next_review_date);

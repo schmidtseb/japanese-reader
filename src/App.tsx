@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { 
     useAppData, 
+    useAuth,
     useSettings,
     useUI,
     View 
@@ -18,10 +19,10 @@ import { BottomSheet } from './components/BottomSheet.tsx';
 import { JumpButton } from './components/JumpButton.tsx';
 
 // Direct, static imports for development/sandbox environments
-import EditorView from './features/Editor/EditorView.tsx';
-import ReaderView from './features/Reader/ReaderView.tsx';
-import ReadingModeView from './features/Reader/ReadingModeView.tsx';
-import ReviewController from './features/Review/ReviewController.tsx';
+import { EditorView } from './features/Editor/EditorView.tsx';
+import { ReaderView } from './features/Reader/ReaderView.tsx';
+import { ReadingModeView } from './features/Reader/ReadingModeView.tsx';
+import { ReviewController } from './features/Review/ReviewController.tsx';
 
 function Header() {
   const { state, dispatch } = useAppData();
@@ -88,6 +89,7 @@ function Header() {
 export default function App() {
   const { state: appDataState, dispatch } = useAppData();
   const { state: settingsState } = useSettings();
+  const { authState } = useAuth();
   
   useHotkeys();
 
@@ -136,7 +138,7 @@ export default function App() {
     }
   }, [appDataState.reviewDeck]);
 
-  if (appDataState.isLoading || settingsState.isLoading) {
+  if (appDataState.isLoading || settingsState.isLoading || authState === 'INITIALIZING') {
     return (
       <div className="w-full h-full flex items-center justify-center bg-background">
         <div className="text-center">
