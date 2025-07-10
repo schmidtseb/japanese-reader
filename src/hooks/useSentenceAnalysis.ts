@@ -1,12 +1,12 @@
 // hooks/useSentenceAnalysis.ts
 import { useEffect, useMemo, useCallback, useState } from 'react';
 import { useAppData, useSettings } from '../contexts/index.ts';
-import { useAnalyzeSentence } from '../services/gemini.ts';
+import { useAnalyzeSentence as useSentenceAnalysisApi } from '../services/gemini.ts';
 
 export const useSentenceAnalysis = (entryId: string | null, sentence: string | null) => {
     const { state: appDataState, dispatch: appDataDispatch } = useAppData();
     const { state: settingsState } = useSettings();
-    const { execute: analyzeSentence, error: apiError, isLoading: isApiLoading } = useAnalyzeSentence();
+    const { execute: analyzeSentence, error: apiError, isLoading: isApiLoading } = useSentenceAnalysisApi();
 
     // The state now holds the analysis FOR A SPECIFIC SENTENCE.
     const [analysisData, setAnalysisData] = useState<{ sentence: string; analysis: any } | null>(null);
@@ -54,7 +54,7 @@ export const useSentenceAnalysis = (entryId: string | null, sentence: string | n
         });
 
         return () => { isCancelled = true; };
-    }, [sentence, analysisDepth, currentEntry, analyzeSentence, analysisData?.sentence]);
+    }, [sentence, analysisDepth, currentEntry, analyzeSentence]);
     
     // Effect to write to cache after a successful fetch.
     useEffect(() => {

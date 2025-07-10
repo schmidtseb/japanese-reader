@@ -3,12 +3,12 @@
 
 
 
-
 import React, { useRef, useEffect, useState } from 'react';
-import { useAppData, useSettings, AnalysisDepth, depthLevels } from '../contexts/index.ts';
+import { useAppData, useSettings, AnalysisDepth, depthLevels, useAuth } from '../contexts/index.ts';
 import { useModal } from './Modal.tsx';
 import { FONT_SIZE_STEPS } from '../utils/constants.ts';
 import * as db from '../services/db.ts';
+import { AccountManager } from './AccountManager.tsx';
 
 const Toggle = ({ label, shortcut, checked, onChange, id }: { label: string, shortcut?: string, checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, id: string }) => (
     <div className="flex items-center justify-between">
@@ -26,10 +26,12 @@ const Toggle = ({ label, shortcut, checked, onChange, id }: { label: string, sho
 export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
     const { state: settingsState, dispatch: settingsDispatch } = useSettings();
     const { state: appDataState, dispatch: appDataDispatch } = useAppData();
+    const { authState, supabase, user } = useAuth();
     const { showAlert, showConfirmation } = useModal();
     const menuRef = useRef<HTMLDivElement>(null);
     const [apiKeyInput, setApiKeyInput] = useState('');
     const [isKeyVisible, setIsKeyVisible] = useState(false);
+    const [isKeySaving, setIsKeySaving] = useState(false);
     const [notificationPermission, setNotificationPermission] = useState('Notification' in window ? Notification.permission : 'default');
 
     useEffect(() => {
@@ -52,9 +54,31 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
         settingsDispatch({ type: 'UPDATE_SETTINGS', payload });
     };
 
-    const handleSaveApiKey = () => {
-        handleSettingChange({ userApiKey: apiKeyInput });
-        showAlert('API Key settings updated.');
+    const handleSaveApiKey = async () => {
+        setIsKeySaving(true);
+        const trimmedKey = apiKeyInput.trim();
+
+        // If logged in, save to Supabase. Otherwise, save locally.
+        if (authState === 'LOGGED_IN' && supabase) {
+             try {
+                const { error } = await supabase.functions.invoke('set-user-api-key', {
+                    body: { apiKey: trimmedKey },
+                });
+                if (error) throw error;
+                
+                // Also save to local settings for immediate use and as a cache.
+                handleSettingChange({ userApiKey: trimmedKey });
+                showAlert('API Key securely saved to your account.');
+
+            } catch (err) {
+                showAlert(`Error saving key to account: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            }
+        } else {
+            // Save to local IndexedDB only.
+            handleSettingChange({ userApiKey: trimmedKey });
+            showAlert('API Key settings updated locally.');
+        }
+        setIsKeySaving(false);
     };
     
     const handleEnableBadging = async () => {
@@ -173,6 +197,7 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
     };
 
     const analysisDepthIndex = depthLevels.indexOf(settingsState.analysisDepth);
+    const isSupabaseConfigured = !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY;
     
     const renderBadgingButton = () => {
         const statusMap = {
@@ -202,6 +227,55 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
         );
     };
 
+    const renderApiKeySection = () => {
+        const isLoggedIn = authState === 'LOGGED_IN';
+        let keyStatusText = "Using the default application key.";
+        if (settingsState.userApiKey) {
+            keyStatusText = isLoggedIn
+                ? "Using API key from your account."
+                : "Using API key from local browser storage.";
+        }
+        const saveButtonText = isLoggedIn ? "Save to Account" : "Save Key";
+
+        return (
+             <div>
+                <p className="text-sm font-medium text-text-secondary mb-3">API Key Management (Gemini)</p>
+                <div className="relative flex items-center">
+                    <input
+                        type={isKeyVisible ? 'text' : 'password'}
+                        value={apiKeyInput}
+                        onChange={(e) => setApiKeyInput(e.target.value)}
+                        placeholder="Enter your Gemini API Key"
+                        className="w-full rounded-lg border-border-subtle bg-surface-soft shadow-sm focus-ring text-sm px-4 py-2 pr-10"
+                        aria-label="Gemini API Key"
+                        disabled={isKeySaving}
+                    />
+                    <button
+                        type="button"
+                        className="absolute right-2 text-text-muted hover:text-text-primary p-1"
+                        onClick={() => setIsKeyVisible(!isKeyVisible)}
+                        title={isKeyVisible ? 'Hide key' : 'Show key'}
+                    >
+                        <i className={`bi ${isKeyVisible ? 'bi-eye-slash' : 'bi-eye'} text-base`}></i>
+                    </button>
+                </div>
+                <div className="flex gap-2 mt-2">
+                    <button 
+                        onClick={handleSaveApiKey}
+                        disabled={isKeySaving}
+                        className="flex-1 text-xs font-medium px-3 py-2 rounded-lg bg-primary/80 text-primary-text hover:bg-primary transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+                    >
+                        {isKeySaving ? <i className="bi bi-arrow-repeat text-base animate-spin"></i> : <i className="bi bi-save text-base"></i>}
+                        {saveButtonText}
+                    </button>
+                </div>
+                <p className="text-xs text-text-muted mt-2 px-1">
+                    {keyStatusText}
+                </p>
+            </div>
+        );
+    };
+
     return (
         <>
             <div
@@ -216,6 +290,13 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
                     </button>
                 </header>
                 <div className="p-4 space-y-4 overflow-y-auto no-scrollbar">
+                    {isSupabaseConfigured && (
+                        <>
+                            <AccountManager />
+                            <hr className="border-border-subtle" />
+                        </>
+                    )}
+
                     <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                         <Toggle id="pitch-accent-checkbox" label="Pitch Accent" checked={settingsState.showPitchAccent} onChange={(e) => handleSettingChange({ showPitchAccent: e.target.checked })} />
                         <Toggle id="furigana-checkbox" label="Furigana" shortcut="F" checked={settingsState.showFurigana} onChange={(e) => handleSettingChange({ showFurigana: e.target.checked })} />
@@ -259,39 +340,7 @@ export function SettingsMenu({ setIsOpen }: { setIsOpen: (isOpen: boolean) => vo
                         </div>
                     </div>
                     <hr className="border-border-subtle" />
-                    <div>
-                        <p className="text-sm font-medium text-text-secondary mb-3">API Key Management</p>
-                        <div className="relative flex items-center">
-                            <input
-                                type={isKeyVisible ? 'text' : 'password'}
-                                value={apiKeyInput}
-                                onChange={(e) => setApiKeyInput(e.target.value)}
-                                placeholder="Enter your Gemini API Key"
-                                className="w-full rounded-lg border-border-subtle bg-surface-soft shadow-sm focus-ring text-sm px-4 py-2 pr-10"
-                                aria-label="Gemini API Key"
-                            />
-                            <button
-                                type="button"
-                                className="absolute right-2 text-text-muted hover:text-text-primary p-1"
-                                onClick={() => setIsKeyVisible(!isKeyVisible)}
-                                title={isKeyVisible ? 'Hide key' : 'Show key'}
-                            >
-                                <i className={`bi ${isKeyVisible ? 'bi-eye-slash' : 'bi-eye'} text-base`}></i>
-                            </button>
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                            <button onClick={handleSaveApiKey} className="flex-1 text-xs font-medium px-3 py-2 rounded-lg bg-primary/80 text-primary-text hover:bg-primary transition-colors inline-flex items-center justify-center gap-2">
-                                <i className="bi bi-save text-base"></i>
-                                Save Key
-                            </button>
-                        </div>
-                        <p className="text-xs text-text-muted mt-2 px-1">
-                            {settingsState.userApiKey 
-                                ? "Using your custom API key." 
-                                : "Using the default application key."}
-                            Your key is stored in your browser's database.
-                        </p>
-                    </div>
+                    {renderApiKeySection()}
                     <hr className="border-border-subtle" />
                     {renderBadgingButton()}
                     <hr className="border-border-subtle" />

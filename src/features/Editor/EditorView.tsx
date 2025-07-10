@@ -1,19 +1,24 @@
 
 
 
+
+
+
+
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAppData, View, TextEntry, useSettings } from '../../contexts/index.ts';
 import { useModal } from '../../components/Modal.tsx';
 import * as db from '../../services/db.ts';
 import { AnalysisDepth } from '../../contexts/settingsContext.tsx';
-import { extractTextFromUrl } from '../../services/gemini.ts';
+import { useExtractTextFromUrl } from '../../services/gemini.ts';
 
 const UNSAVED_TITLE_KEY = 'unsaved-title';
 const UNSAVED_TEXT_KEY = 'unsaved-text';
 
 type ActiveTab = 'manual' | 'url';
 
-export default function EditorView() {
+export function EditorView() {
     const { state, dispatch } = useAppData();
     const { state: settingsState } = useSettings();
     const { showAlert } = useModal();
@@ -22,8 +27,7 @@ export default function EditorView() {
     const [isLoaded, setIsLoaded] = useState(false);
     
     const [url, setUrl] = useState('');
-    const [isFetchingUrl, setIsFetchingUrl] = useState(false);
-    const [fetchUrlError, setFetchUrlError] = useState<string | null>(null);
+    const { isLoading: isFetchingUrl, error: fetchUrlError, execute: extractText, data: extractedData, reset: resetExtraction } = useExtractTextFromUrl();
 
     const [activeTab, setActiveTab] = useState<ActiveTab>('manual');
 
@@ -61,37 +65,33 @@ export default function EditorView() {
     }, [text, editingEntry, isLoaded]);
 
     const triggerUrlFetch = useCallback(async (urlToFetch: string) => {
-        setFetchUrlError(null);
-        setIsFetchingUrl(true);
-        try {
-            const result = await extractTextFromUrl(urlToFetch);
+        resetExtraction();
+        const result = await extractText(urlToFetch);
+        if (result) {
             setTitle(result.title);
             setText(result.japanese_text);
             setUrl('');
             setActiveTab('manual');
-        } catch (err) {
-            // Put the failed URL back in the input for the user to see/correct
+        } else {
+            // Error is handled by the hook, but we put the URL back for correction
             setUrl(urlToFetch);
             setActiveTab('url');
-            setFetchUrlError((err as Error).message);
-        } finally {
-            setIsFetchingUrl(false);
         }
-    }, []);
+    }, [extractText, resetExtraction]);
 
     const handleFetchUrl = useCallback(async () => {
         if (!url) {
-            setFetchUrlError("Please enter a URL.");
+            showAlert("Please enter a URL.");
             return;
         }
         try {
             new URL(url);
         } catch (_) {
-            setFetchUrlError("Invalid URL format.");
+            showAlert("Invalid URL format.");
             return;
         }
         await triggerUrlFetch(url);
-    }, [url, triggerUrlFetch]);
+    }, [url, triggerUrlFetch, showAlert]);
     
     // Handle incoming shared URL from PWA share_target
     useEffect(() => {
@@ -139,7 +139,7 @@ export default function EditorView() {
             dispatch({ type: 'SET_VIEW', payload: View.Reader });
         } else {
             const newEntry: TextEntry = {
-                id: Date.now().toString(),
+                id: crypto.randomUUID(),
                 title: entryTitle,
                 text: trimmedText,
                 createdAt: Date.now(),
@@ -245,7 +245,7 @@ export default function EditorView() {
                             {fetchUrlError && (
                                  <p className="text-sm text-destructive mt-1.5 px-2">
                                     <i className="bi bi-exclamation-circle-fill mr-1 align-middle"></i>
-                                    {fetchUrlError}
+                                    {fetchUrlError.message}
                                 </p>
                             )}
                         </div>

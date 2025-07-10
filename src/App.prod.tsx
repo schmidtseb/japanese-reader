@@ -5,6 +5,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { 
     useAppData, 
+    useAuth,
     useSettings,
     useUI,
     View 
@@ -17,11 +18,11 @@ import { Tooltip } from './components/Tooltip.tsx';
 import { BottomSheet } from './components/BottomSheet.tsx';
 import { JumpButton } from './components/JumpButton.tsx';
 
-// Lazy-load the main views
-const EditorView = lazy(() => import('./features/Editor/EditorView.tsx'));
-const ReaderView = lazy(() => import('./features/Reader/ReaderView.tsx'));
-const ReadingModeView = lazy(() => import('./features/Reader/ReadingModeView.tsx'));
-const ReviewController = lazy(() => import('./features/Review/ReviewController.tsx'));
+// Lazy-load the main views using named exports
+const EditorView = lazy(() => import('./features/Editor/EditorView.tsx').then(module => ({ default: module.EditorView })));
+const ReaderView = lazy(() => import('./features/Reader/ReaderView.tsx').then(module => ({ default: module.ReaderView })));
+const ReadingModeView = lazy(() => import('./features/Reader/ReadingModeView.tsx').then(module => ({ default: module.ReadingModeView })));
+const ReviewController = lazy(() => import('./features/Review/ReviewController.tsx').then(module => ({ default: module.ReviewController })));
 
 function Header() {
   const { state, dispatch } = useAppData();
@@ -97,6 +98,7 @@ const ViewLoader = () => (
 export default function App() {
   const { state: appDataState, dispatch } = useAppData();
   const { state: settingsState } = useSettings();
+  const { authState } = useAuth();
   
   useHotkeys();
 
@@ -117,24 +119,21 @@ export default function App() {
 
   useEffect(() => {
     // App Icon Badging for PWA
-    if ('setAppBadge' in navigator) {
-        // Calculate total due reviews across all texts, including new items.
+    if ('setAppBadge' in navigator && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
         const totalDueCount = appDataState.reviewDeck.filter(item => item.srsStage === 0 || item.nextReviewDate <= Date.now()).length;
-        
         if (totalDueCount > 0) {
-            // Type assertion to satisfy TypeScript about the experimental API
-            (navigator as any).setAppBadge(totalDueCount).catch((error: any) => {
-                console.error('Failed to set app badge.', error);
-            });
+            (navigator as any).setAppBadge(totalDueCount).catch((error: any) => console.error('Failed to set app badge.', error));
         } else {
-            (navigator as any).clearAppBadge().catch((error: any) => {
-                console.error('Failed to clear app badge.', error);
-            });
+            (navigator as any).clearAppBadge().catch((error: any) => console.error('Failed to clear app badge.', error));
         }
+      } else {
+        (navigator as any).clearAppBadge().catch(() => {});
+      }
     }
   }, [appDataState.reviewDeck]);
 
-  if (appDataState.isLoading || settingsState.isLoading) {
+  if (appDataState.isLoading || settingsState.isLoading || authState === 'INITIALIZING') {
     return (
       <div className="w-full h-full flex items-center justify-center bg-background">
         <div className="text-center">

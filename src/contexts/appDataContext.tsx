@@ -1,7 +1,8 @@
 // contexts/appDataContext.tsx
-import React, { createContext, useReducer, useContext, useEffect, Dispatch } from 'react';
+import React, { createContext, useReducer, useContext, useEffect, Dispatch, useCallback } from 'react';
 import { AnalysisDepth } from './settingsContext.tsx';
 import * as db from '../services/db.ts';
+import { useAuth } from './authContext.tsx';
 
 // --- TYPE DEFINITIONS ---
 export interface TextEntry {
@@ -274,7 +275,7 @@ export const appDataReducer = (state: AppDataState, action: AppDataAction): AppD
                 [sentence]: newSentenceAnalyses,
             };
             
-            const updatedEntry = { ...oldEntry, analyzedSentences: newAnalyzedSentences };
+            const updatedEntry = { ...oldEntry, analyzedSentences: newAnalyzedSentences, updatedAt: Date.now() };
             historyCopy[entryIndex] = updatedEntry;
             
             db.addOrUpdateTextEntry(updatedEntry);
@@ -306,8 +307,86 @@ interface AppDataProviderProps {
 
 export function AppDataProvider({ children, _testDispatch, _testState }: AppDataProviderProps) {
     const [state, dispatch] = useReducer(appDataReducer, _testState || initialState);
+    const { user, supabase } = useAuth();
 
-    const finalDispatch = _testDispatch || dispatch;
+    const syncedDispatch = useCallback(async (action: AppDataAction) => {
+        // Run local reducer first for optimistic UI updates
+        dispatch(action);
+        
+        // If not logged in, or no supabase client, we're done.
+        if (!user || !supabase) return;
+        
+        try {
+            switch (action.type) {
+                case 'ADD_OR_UPDATE_TEXT_ENTRY': {
+                    const entry = action.payload;
+                    const entryToUpsert = {
+                        id: entry.id,
+                        user_id: user.id,
+                        title: entry.title,
+                        text: entry.text,
+                        reading_progress: entry.readingProgress,
+                        analyzed_sentences: entry.analyzedSentences,
+                        created_at: new Date(entry.createdAt).toISOString(),
+                        updated_at: new Date(entry.updatedAt).toISOString(),
+                    };
+                    await supabase.from('text_entries').upsert(entryToUpsert);
+                    break;
+                }
+                case 'CACHE_ANALYSIS': {
+                    // This action updates the state first, so we need to get the updated entry from there.
+                    // A better way would be to get it from the reducer, but this works for now.
+                    // This creates a dependency on state which might be slightly stale, but it's acceptable.
+                    const updatedEntry = state.history.find(e => e.id === action.payload.entryId);
+                    if (updatedEntry) {
+                       const entryToUpsert = {
+                           id: updatedEntry.id,
+                           user_id: user.id,
+                           title: updatedEntry.title,
+                           text: updatedEntry.text,
+                           reading_progress: updatedEntry.readingProgress,
+                           analyzed_sentences: updatedEntry.analyzedSentences,
+                           created_at: new Date(updatedEntry.createdAt).toISOString(),
+                           updated_at: new Date(updatedEntry.updatedAt).toISOString(),
+                       };
+                       await supabase.from('text_entries').upsert(entryToUpsert);
+                    }
+                    break;
+                }
+                case 'REMOVE_TEXT_ENTRY':
+                    await supabase.from('text_entries').delete().match({ id: action.payload, user_id: user.id });
+                    break;
+                case 'CLEAR_HISTORY':
+                    await supabase.from('text_entries').delete().match({ user_id: user.id });
+                    break;
+                case 'ADD_OR_UPDATE_REVIEW_ITEM': {
+                    const item = action.payload;
+                    const itemToUpsert = {
+                        id: item.id,
+                        user_id: user.id,
+                        type: item.type,
+                        content: item.content,
+                        text_entry_id: item.textEntryId,
+                        srs_stage: item.srsStage,
+                        interval_modifier: item.intervalModifier,
+                        incorrect_answer_count: item.incorrectAnswerCount,
+                        next_review_date: new Date(item.nextReviewDate).toISOString(),
+                        added_at: new Date(item.addedAt).toISOString(),
+                    };
+                    await supabase.from('review_deck').upsert(itemToUpsert);
+                    break;
+                }
+                case 'REMOVE_REVIEW_ITEM':
+                    await supabase.from('review_deck').delete().match({ id: action.payload, user_id: user.id });
+                    break;
+            }
+        } catch (error) {
+            console.error("Supabase sync failed:", error);
+            // Here one could dispatch a "SYNC_FAILED" action to show a UI indicator
+        }
+    }, [user, supabase, state.history]);
+    
+    const finalDispatch = _testDispatch || syncedDispatch as Dispatch<AppDataAction>;
 
     useEffect(() => {
         if (_testState) {

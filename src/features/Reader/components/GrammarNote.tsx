@@ -24,7 +24,6 @@ export const GrammarNote: React.FC<GrammarNoteProps> = ({ pattern, onNoteClick, 
         }
     };
 
-    const itemId = `grammar-${pattern.pattern_name}`;
     const constituentText = (pattern.constituent_indices || [])
         .map((index: number) => {
             // Defensive check: Ensure the segment exists before accessing its properties.
@@ -63,7 +62,7 @@ export const GrammarNote: React.FC<GrammarNoteProps> = ({ pattern, onNoteClick, 
                         {isLoading ? <i className="bi bi-arrow-repeat text-base animate-spin"></i> : <i className="bi bi-card-list text-base"></i>}
                         <span className="button-text">{showExamples && data ? 'Hide' : 'Examples'}</span>
                     </button>
-                    <AddToDeckButton itemId={itemId} itemType="grammar" itemContent={patternContent} />
+                    <AddToDeckButton itemType="grammar" itemContent={patternContent} />
                 </div>
                 {showExamples && (
                     <div className="examples-container mt-4 pt-4 border-t border-dashed border-border-subtle">

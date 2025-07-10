@@ -1,24 +1,47 @@
 // src/features/Reader/components/Segment.tsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Furigana } from '../../../components/Furigana.tsx';
 import { PitchAccentVisualizer } from '../../../components/PitchAccentVisualizer.tsx';
 import { AddToDeckButton } from './AddToDeckButton.tsx';
 import { getCategoryClass } from '../../../utils/style-utils.ts';
 import { useSettings, useUI } from '../../../contexts/index.ts';
+import { WordDetails } from '../../../components/WordDetails.tsx';
 
-const SegmentDetails = ({ segment }: { segment: any }) => (
-    <div>
-         <div className="text-lg font-japanese font-semibold mb-3 pb-2 border-b border-border-subtle"><Furigana base={segment.japanese_segment} reading={segment.reading || ''} interactiveKanji/></div>
-         <div className="space-y-2 text-sm">
-            <p><strong className="font-medium text-text-secondary">Meaning:</strong> {segment.english_equivalent}</p>
-            <p><strong className="font-medium text-text-secondary">Category:</strong> <span className="capitalize">{segment.category.replace(/_/g, ' ').toLowerCase()}</span></p>
-            <p><strong className="font-medium text-text-secondary">Reading:</strong> {segment.reading}</p>
+const SegmentDetails = ({ segment }: { segment: any }) => {
+    const [view, setView] = useState<'info' | 'analysis'>('info');
+
+    const baseCategory = segment.category.split(/[-_]/)[0];
+    const canAnalyzeWord = ['NOUN', 'VERB', 'ADJECTIVE', 'ADVERB'].includes(baseCategory);
+
+    if (view === 'analysis') {
+        return <WordDetails word={segment.japanese_segment} reading={segment.reading} onBack={() => setView('info')} />;
+    }
+
+    return (
+        <div>
+            <div className="text-lg font-japanese font-semibold mb-3 pb-2 border-b border-border-subtle">
+                <Furigana base={segment.japanese_segment} reading={segment.reading || ''} interactiveKanji/>
+            </div>
+            <div className="space-y-2 text-sm">
+                <p><strong className="font-medium text-text-secondary">Meaning:</strong> {segment.english_equivalent}</p>
+                <p><strong className="font-medium text-text-secondary">Category:</strong> <span className="capitalize">{segment.category.replace(/_/g, ' ').toLowerCase()}</span></p>
+                <p><strong className="font-medium text-text-secondary">Reading:</strong> {segment.reading}</p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-border-subtle flex justify-between items-center gap-2">
+                <AddToDeckButton itemType="word" itemContent={segment} />
+                {canAnalyzeWord && (
+                     <button
+                        onClick={() => setView('analysis')}
+                        className="text-xs font-semibold px-2 py-1 rounded-md border border-accent text-accent hover:bg-accent-subtle-bg transition"
+                        title="Get detailed analysis and examples for this word"
+                    >
+                        Analyze Word
+                    </button>
+                )}
+            </div>
         </div>
-        <div className="mt-4 pt-3 border-t border-border-subtle">
-            <AddToDeckButton itemId={`word-${segment.japanese_segment}-${segment.reading}`} itemType="word" itemContent={segment} />
-        </div>
-    </div>
-);
+    );
+};
 
 export const Segment = ({ segment }: { segment: any }) => {
     const { state: settingsState } = useSettings();

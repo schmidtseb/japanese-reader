@@ -125,3 +125,132 @@ export const ARTICLE_EXTRACTION_SCHEMA = {
     },
     required: ["title", "japanese_text"]
 };
+
+export const KANJI_DETAILS_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    kanji: {
+      type: "STRING",
+      description: "The Kanji character that was analyzed."
+    },
+    meaning: {
+      type: "STRING",
+      description: "The primary English meaning(s) of the Kanji."
+    },
+    onyomi: {
+      type: "STRING",
+      description: "The On'yomi (Sino-Japanese) reading(s) of the Kanji in Katakana, separated by commas if multiple exist."
+    },
+    kunyomi: {
+      type: "STRING",
+      description: "The Kun'yomi (native Japanese) reading(s) of the Kanji in Hiragana, separated by commas if multiple exist."
+    },
+    jlpt_level: {
+      type: "STRING",
+      description: "The JLPT proficiency level associated with this Kanji (e.g., 'N5', 'N1'). Should be 'N/A' if not applicable."
+    },
+    stroke_count: {
+      type: "NUMBER",
+      description: "The number of strokes required to write the Kanji."
+    },
+    example_words: {
+      type: "ARRAY",
+      description: "An array of 2-3 common words that use this Kanji.",
+      items: {
+        type: "OBJECT",
+        properties: {
+          word: { type: "STRING", description: "The example word in Japanese (using Kanji)." },
+          reading: { type: "STRING", description: "The reading of the example word in Hiragana." },
+          meaning: { type: "STRING", description: "The English meaning of the example word." }
+        },
+        required: ["word", "reading", "meaning"]
+      }
+    }
+  },
+  required: ["kanji", "meaning", "onyomi", "kunyomi", "jlpt_level", "stroke_count", "example_words"]
+};
+
+export const WORD_DETAILS_SCHEMA = {
+  type: "OBJECT",
+  description: "A detailed analysis of a single Japanese word.",
+  properties: {
+    word: {
+      type: "STRING",
+      description: "The word that was analyzed."
+    },
+    reading: {
+      type: "STRING",
+      description: "The hiragana reading of the word."
+    },
+    part_of_speech: {
+      type: "STRING",
+      description: "The primary grammatical category of the word (e.g., 'Noun', 'Ichidan verb')."
+    },
+    definition: {
+      type: "STRING",
+      description: "A clear and concise English definition of the word."
+    },
+    example_sentences: {
+      type: "ARRAY",
+      description: "An array of 2-3 useful example sentences.",
+      items: {
+        type: "OBJECT",
+        properties: {
+          japanese: {
+            type: "STRING",
+            description: "The full example sentence in Japanese."
+          },
+          reading: {
+            type: "STRING",
+            description: "The complete hiragana reading of the example sentence."
+          },
+          english: {
+            type: "STRING",
+            description: "The English translation of the example sentence."
+          }
+        },
+        required: ["japanese", "reading", "english"]
+      }
+    }
+  },
+  required: ["word", "reading", "part_of_speech", "definition", "example_sentences"]
+};
+
+export const COMPREHENSION_QUIZ_SCHEMA = {
+  type: "OBJECT",
+  description: "An AI-generated reading comprehension quiz based on a Japanese text.",
+  properties: {
+    estimated_jlpt_level: {
+      type: "STRING",
+      description: "The estimated JLPT level of the provided text (e.g., N5, N4, N3, N2, N1)."
+    },
+    questions: {
+      type: "ARRAY",
+      description: "An array of 3-5 multiple-choice questions in English about the text.",
+      items: {
+        type: "OBJECT",
+        properties: {
+          question: {
+            type: "STRING",
+            description: "The text of the comprehension question."
+          },
+          options: {
+            type: "ARRAY",
+            description: "An array of 4 string options for the multiple-choice question.",
+            items: { "type": "STRING" }
+          },
+          correct_answer_index: {
+            type: "NUMBER",
+            description: "The 0-based index of the correct answer in the 'options' array."
+          },
+          explanation: {
+            type: "STRING",
+            description: "A brief explanation of why the correct answer is right, referencing the original text."
+          }
+        },
+        required: ["question", "options", "correct_answer_index", "explanation"]
+      }
+    }
+  },
+  required: ["estimated_jlpt_level", "questions"]
+};
